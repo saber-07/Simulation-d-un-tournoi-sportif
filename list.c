@@ -6,6 +6,7 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "list.h"
 
 List new_list (void){return NULL;}
@@ -34,7 +35,7 @@ int list_length(List li)
 }
 //--------------------------------------------------------------------------------------------------------------------------
 
-List push_back_list(List li, int x)
+List push_back_list(List li, char x[NAMEZIZE])
 {
     ListElement *element;
     
@@ -45,7 +46,7 @@ List push_back_list(List li, int x)
         exit(EXIT_FAILURE);
     }
     
-    element->info=x;
+    strcpy(element->name, x);
     element->next=NULL;
     
     if(list_is_empty(li)) return element;
@@ -62,7 +63,7 @@ List push_back_list(List li, int x)
     }
 }
 //--------------------------------------------------------------------------------------------------------------------------
-List push_front_list(List li, int x)
+List push_front_list(List li, char x[NAMEZIZE])
 {
     ListElement *element;
     
@@ -73,7 +74,7 @@ List push_front_list(List li, int x)
         exit(EXIT_FAILURE);
     }
     
-    element->info=x;
+    strcpy(element->name, x);
     
     if(list_is_empty(li))
         element->next=NULL;
@@ -144,7 +145,7 @@ void  print_list (List li)
         return;
     }
     while(li !=NULL)
-     {  printf("[%d]",li->info);
+     {  printf("[%d]",li->name);
          li=li->next;   }
      printf("\n");
 }
@@ -169,14 +170,14 @@ List insert(List li, int x)
         fprintf(stderr, "probléme d'allocation dynamique. \n");
         exit(EXIT_FAILURE);
     }
-    element->info = x;
+    element->name = x;
     element->next=NULL;
     
     if (list_is_empty(li)) {
         return element;
     }
     else{
-        while (temp != NULL && temp->info < x) {
+        while (temp != NULL && temp->name < x) {
             before = temp;
             temp = temp->next;
         }
@@ -185,7 +186,7 @@ List insert(List li, int x)
             before->next = element;
             return li;
         }
-        else if (temp->info>x && before != NULL){
+        else if (temp->name>x && before != NULL){
             before->next = element;
             element->next = temp;
             return li;
@@ -201,7 +202,7 @@ List insert(List li, int x)
 List fusion(List li1, List li2){
     List li=new_list(), temp;
     
-    if (li1->info < li2->info){
+    if (li1->name < li2->name){
         li = li1;
         li1 = li1->next;
     }
@@ -212,7 +213,7 @@ List fusion(List li1, List li2){
     temp = li;
     
     while (li1 != NULL && li2 != NULL) {
-        if (li1->info < li2->info){
+        if (li1->name < li2->name){
             temp->next = li1;
             li1 = li1->next;
         }
@@ -238,7 +239,7 @@ List supp_oc(List li, int x)
     ListElement *temp=new_list(), *before=li, *current=li->next;
     
     while (current != NULL) {
-        if (current->info == x) {
+        if (current->name == x) {
             temp = current;
             before->next = current->next;
             current = before->next;
@@ -254,40 +255,40 @@ List supp_oc(List li, int x)
 }
 //--------------------------------------------------------------------------------------------------------------------------
 
-void eclate(List *li, List *lp, List *lip)
-{
-    ListElement *temp=*li, *current1=NULL, *current2=NULL;
+// void eclate(List *li, List *lp, List *lip)
+// {
+//     ListElement *temp=*li, *current1=NULL, *current2=NULL;
     
-    if (temp==NULL)
-        printf("cette list est vide");
-    else{
-        while (temp != NULL) {
-            if (temp->info %2 == 0) {
-                if (current1 == NULL) {
-                    *lp = temp;
-                    current1 = temp;
-                }
-                else{
-                    current1->next = temp;
-                    current1 = current1->next;
-                }
-            }
-            else{
-                if (current2 == NULL) {
-                    *lip = temp;
-                    current2 = temp;
-                }
-                else{
-                    current2->next = temp;
-                    current2 = current2->next;
-                }
-            }
-            temp = temp->next;
-        }
-        if (current1 != NULL)
-            current1->next = NULL;
-        if (current2 != NULL)
-            current2->next = NULL;
-        *li = NULL;
-    }
-}
+//     if (temp==NULL)
+//         printf("cette list est vide");
+//     else{
+//         while (temp != NULL) {
+//             if (temp->name %2 == 0) {
+//                 if (current1 == NULL) {
+//                     *lp = temp;
+//                     current1 = temp;
+//                 }
+//                 else{
+//                     current1->next = temp;
+//                     current1 = current1->next;
+//                 }
+//             }
+//             else{
+//                 if (current2 == NULL) {
+//                     *lip = temp;
+//                     current2 = temp;
+//                 }
+//                 else{
+//                     current2->next = temp;
+//                     current2 = current2->next;
+//                 }
+//             }
+//             temp = temp->next;
+//         }
+//         if (current1 != NULL)
+//             current1->next = NULL;
+//         if (current2 != NULL)
+//             current2->next = NULL;
+//         *li = NULL;
+//     }
+// }
