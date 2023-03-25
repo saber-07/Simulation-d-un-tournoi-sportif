@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <unistd.h>
+#include <ipcTools.h>
 // Fonctions utilisées : fopen,fgets,strcpy,
 //Création de la structure qui contiendra les equipes. (j'ai choisi une liste chainée)
 typedef struct equipe Equipe;
