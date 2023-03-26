@@ -163,14 +163,18 @@ int main() {
                 strcpy(equipe1, NomEquipe(*memoire_partagee));
                 *memoire_partagee = supprimer_equipe(*memoire_partagee);
                 strcpy(equipe2, NomEquipe(*memoire_partagee));
-                *memoire_partagee = ajouter_equipe(*memoire_partagee, equipe1);
+                *memoire_partagee = supprimer_equipe(*memoire_partagee);
                 printf("%s %d - %d %s\n", equipe1, score1, score2, equipe2);
+                *memoire_partagee = ajouter_equipe(*memoire_partagee, equipe1);
                 sb.sem_op = 1; // sb.sem_num = 0, sb.sem_op = 1, sb.sem_flg = 0
                 if (semop(semid, &sb, 1) == -1) {
                     perror("Erreur lors de la mise en attente du semaphore");
                     semctl(semid,0,IPC_RMID,0);
                     exit(1);
                 }
+                  // libere memoire_partagee
+                shmdt(memoire_partagee);
+                shmctl(shmid,IPC_RMID,0);
                 exit(0);
             }
         }
