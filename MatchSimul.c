@@ -86,16 +86,16 @@ int main() {
         "Paris Saint-Germain", "Borussia Dortmund", "Inter Milan", "Arsenal",
         "Manchester City", "Tottenham", "Atlético Madrid", "Valence",
         "Ajax Amsterdam", "Benfica Lisbonne", "Porto", "Spartak Moscou",
-        "Galatasaray", "Fenerbahçe", "CSKA Moscou", "PAOK Salonique",
+        "Galatasaray", "Fenerbahce", "CSKA Moscou", "PAOK Salonique",
         "Celtic Glasgow", "Rangers Glasgow", "Boca Juniors", "River Plate",
         "Flamengo", "Santos", "Palmeiras", "Corinthians"
     };
     ListeE* memoire_partagee;
     ListeE equipes = NULL; // Initialisation de la liste à NULL
 
-    int nbMatchs = 32;
+    int nbEquipes = 32;
     int i;
-    for (i = 0; i < 32; i++) {
+    for (i = 0; i < nbEquipes; i++) {
         equipes = ajouter_equipe(equipes, noms[i]);
     }
      // Création de la clé pour la mémoire partagée
@@ -123,7 +123,7 @@ int main() {
         perror("semget failed");
         return 2;
     }
-    /* etape 2: initialisation du semaphore a 0 */
+    /* etape 2: initialisation du semaphore a 1 */
     if (semctl(semid, 0, SETVAL, 1) == -1) {
         perror("semctl failed");
         semctl(semid,0,IPC_RMID,0);   /* detruit le semaphore */
@@ -131,17 +131,14 @@ int main() {
     }
   
     // Attachement de la mémoire partagée au processus courant
-    memoire_partagee = (ListeE*) shmat(shmid,0,0);
+    memoire_partagee = (ListeE*) shmat(shmid, 0, 0);
     if (memoire_partagee == (ListeE) -1) {
-        perror("Erreur lors de l'attachement de la mémoire partagée");
-        shmctl(shmid,IPC_RMID,0);
-        exit(1);
+      perror("Erreur lors de l'attachement de la mémoire partagée");
+      exit(31);
     }
 
     *memoire_partagee = equipes;
-    printf("hello\n");
-    afficher_equipes(*memoire_partagee);
-  
+    int nbMatchs = 16;
     while (nbMatchs > 0) {
         int i;
         for (i = 0; i < nbMatchs; i++) {
@@ -150,48 +147,42 @@ int main() {
             if (pid < 0) {
                 perror("Erreur fork");
                 shmctl(shmid,IPC_RMID,0); 
-                semctl(semid,0,IPC_RMID,NULL);
+                semctl(semid,0,IPC_RMID,0);
                 exit(1);
             } else if (pid == 0) {
                 srand(getpid());
                 int score1 = rand() % 5;
                 int score2 = rand() % 5;
                 char equipe1[100], equipe2[100];
-
-                sb.sem_op = -1;
-                if (semop(semid, &sb, 1) == -1) {       /* P() */
-                    perror ("semop failed in child");
-                    semctl(semid,0,IPC_RMID,0);   /* detruit le semaphore */
-                    exit(4);
+                sb.sem_op = -1; // sb.sem_num = 0, sb.sem_op = -1, sb.sem_flg = 0
+                if (semop(semid, &sb, 1) == -1) {
+                    perror("Erreur lors de la mise en attente du semaphore");
+                    semctl(semid,0,IPC_RMID,0);
+                    exit(1);
                 }
-              
                 strcpy(equipe1, NomEquipe(*memoire_partagee));
                 *memoire_partagee = supprimer_equipe(*memoire_partagee);
                 strcpy(equipe2, NomEquipe(*memoire_partagee));
-                *memoire_partagee = supprimer_equipe(*memoire_partagee);
-                printf("%s %d - %d %s\n", equipe1, score1, score2, equipe2);
                 *memoire_partagee = ajouter_equipe(*memoire_partagee, equipe1);
-                
-                // deverrouillage du semaphore
-                sb.sem_op = 1;
-                if (semop(semid, &sb, 1) == -1) {       /* V() */
-                    perror ("semop failed in child");
-                    semctl(semid,0,IPC_RMID,0);   /* detruit le semaphore */
-                    exit(5);
+                printf("%s %d - %d %s\n", equipe1, score1, score2, equipe2);
+                sb.sem_op = 1; // sb.sem_num = 0, sb.sem_op = 1, sb.sem_flg = 0
+                if (semop(semid, &sb, 1) == -1) {
+                    perror("Erreur lors de la mise en attente du semaphore");
+                    semctl(semid,0,IPC_RMID,0);
+                    exit(1);
                 }
-              
                 exit(0);
             }
         }
-        while (wait(0) > 0);
+    while (wait(0) > 0);
     printf("\nFin du tour %d\n\n", nbMatchs);
-
     nbMatchs /= 2;
   }
   // libere memoire_partagee
   shmdt(memoire_partagee);
   shmctl(shmid,IPC_RMID,0);
-  //liberer semaphore
+    //liberer semaphore
   semctl(semid,0,IPC_RMID,0);
   return 0;
 }
+
