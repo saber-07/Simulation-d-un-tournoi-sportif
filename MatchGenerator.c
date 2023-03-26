@@ -21,7 +21,7 @@ int main(int argc, char *argv[]){
     if (argc!=2) {printf("Veuillez fournir le nom du fichier en argument.\n"); return 1;}
 
     /* création (ou écrasement) du fichier "toto" */
-    fd = open(argv[1], O_RDONLY);
+    fd = open(argv[1], O_RDONLY, 0777);
     if (fd == -1) { perror("open"); return 2; }
 
     // Lecture du fichier ligne par ligne
