@@ -145,8 +145,8 @@ void  print_list (List li)
         return;
     }
     while(li !=NULL)
-     {  printf("[%d]",li->name);
-         li=li->next;   }
+     {  printf("[%s]\n",li->name);
+        li=li->next;   }
      printf("\n");
 }
 //--------------------------------------------------------------------------------------------------------------------------
@@ -158,99 +158,3 @@ List clear_list(List li)
     
     return new_list();
 }
-
-//--------------------------------------------------------------------------------------------------------------------------
-
-List fusion(List li1, List li2){
-    List li=new_list(), temp;
-    
-    if (li1->name < li2->name){
-        li = li1;
-        li1 = li1->next;
-    }
-    else {
-        li = li2;
-        li2 = li2->next;
-    }
-    temp = li;
-    
-    while (li1 != NULL && li2 != NULL) {
-        if (li1->name < li2->name){
-            temp->next = li1;
-            li1 = li1->next;
-        }
-        else{
-            temp->next = li2;
-            li2 = li2->next;
-        }
-        temp = temp->next;
-    }
-    
-    if (li2 == NULL)
-        temp->next = li1;
-    
-    if (li1 == NULL)
-        temp->next = li2;
-    
-    return li;
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-List supp_oc(List li, int x)
-{
-    ListElement *temp=new_list(), *before=li, *current=li->next;
-    
-    while (current != NULL) {
-        if (current->name == x) {
-            temp = current;
-            before->next = current->next;
-            current = before->next;
-            free(temp);
-        }
-        else{
-            before = current;
-            current = current->next;
-        }
-    }
-    
-    return li;
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-// void eclate(List *li, List *lp, List *lip)
-// {
-//     ListElement *temp=*li, *current1=NULL, *current2=NULL;
-    
-//     if (temp==NULL)
-//         printf("cette list est vide");
-//     else{
-//         while (temp != NULL) {
-//             if (temp->name %2 == 0) {
-//                 if (current1 == NULL) {
-//                     *lp = temp;
-//                     current1 = temp;
-//                 }
-//                 else{
-//                     current1->next = temp;
-//                     current1 = current1->next;
-//                 }
-//             }
-//             else{
-//                 if (current2 == NULL) {
-//                     *lip = temp;
-//                     current2 = temp;
-//                 }
-//                 else{
-//                     current2->next = temp;
-//                     current2 = current2->next;
-//                 }
-//             }
-//             temp = temp->next;
-//         }
-//         if (current1 != NULL)
-//             current1->next = NULL;
-//         if (current2 != NULL)
-//             current2->next = NULL;
-//         *li = NULL;
-//     }
-// }
