@@ -144,6 +144,7 @@ int main() {
   
     while (nbMatchs > 0) {
         int i;
+        for (i = 0; i < nbMatchs; i++) {
             pid_t pid = fork();
 
             if (pid < 0) {
@@ -180,6 +181,7 @@ int main() {
                 }
               
                 exit(0);
+            }
         }
         while (wait(0) > 0);
     printf("\nFin du tour %d\n\n", nbMatchs);
