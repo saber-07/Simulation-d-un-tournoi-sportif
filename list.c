@@ -158,45 +158,7 @@ List clear_list(List li)
     
     return new_list();
 }
-//--------------------------------------------------------------------------------------------------------------------------
 
-List insert(List li, int x)
-{
-    ListElement *temp=li, *element, *before=li;
-    
-    element=malloc(sizeof(*element));
-    
-    if (element==NULL) {
-        fprintf(stderr, "probléme d'allocation dynamique. \n");
-        exit(EXIT_FAILURE);
-    }
-    element->name = x;
-    element->next=NULL;
-    
-    if (list_is_empty(li)) {
-        return element;
-    }
-    else{
-        while (temp != NULL && temp->name < x) {
-            before = temp;
-            temp = temp->next;
-        }
-        
-        if (temp == NULL) {
-            before->next = element;
-            return li;
-        }
-        else if (temp->name>x && before != NULL){
-            before->next = element;
-            element->next = temp;
-            return li;
-        }
-        else{
-            element->next = li;
-            return element;
-        }
-    }
-}
 //--------------------------------------------------------------------------------------------------------------------------
 
 List fusion(List li1, List li2){
