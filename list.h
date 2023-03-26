@@ -30,5 +30,6 @@ List push_front_list(List li, char x[NAMEZIZE]);
 List pop_back_list(List li);
 List pop_front_list(List li);
 List clear_list(List li);
+void eclate(List li, List *lp, List *lip);
 
 #endif /* list_h */

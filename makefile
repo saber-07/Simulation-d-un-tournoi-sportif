@@ -1,5 +1,5 @@
-OBJ = list.o MatchGenerator.o
+OBJ = list.o ipcTools.o MatchGenerator.o
 
 
 MatchGenerator : $(OBJ)
-MatchGenerator.o : list.h
+MatchGenerator.o : list.h ipcTools.h

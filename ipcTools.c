@@ -5,7 +5,26 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/msg.h>
+#include <unistd.h>
 #include "ipcTools.h"
+
+int nFork (int nbProcs){
+    for (int i = 0; i < nbProcs; i++)
+    {
+        int pid = fork();
+
+        switch (pid)
+        {
+        case -1:
+            perror("Creation de processus");
+            return -1;
+        
+        case 0:
+            return nbProcs;
+        }
+    }
+    return 0;
+}
 
 int semalloc(key_t key, int valInit){
 

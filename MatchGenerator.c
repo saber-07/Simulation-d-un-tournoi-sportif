@@ -6,10 +6,71 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/wait.h>
 
+#include "ipcTools.h"
 #include "list.h"
 
+#define NBMATCH 8
+#define TEAMNAMESIZE 30
+#define MAXTIME 500000 // temps max pour simule()
+
+// Var partagé
+typedef struct{
+    char name[TEAMNAMESIZE+1];
+    int nbGoal;
+}TeamMatch;
+typedef struct
+{
+    TeamMatch team1, team2;
+    int n;
+} Match;
+
+typedef struct
+{
+    Match tab[NBMATCH];
+    int i;
+} Shared;
+Shared *shared;
+
+// sémaphores
+int mutMatch;
+
+void remplir(List l1, List l2){
+
+    for(int i=0; i<NBMATCH; i++)
+    {
+        strcpy(shared->tab[i].team1.name, l1->name);
+        l1=l1->next;
+        strcpy(shared->tab[i].team2.name, l2->name);
+        l2=l2->next;
+        printf("%s\t%s\n", l1->name, l2->name);
+        i++;
+    }
+    shared->i=0;
+}
+
+void simule(int n){
+    srand(getpid());
+    usleep(random()%MAXTIME); // simule une execution
+    P(mutMatch);
+    shared->tab[shared->i].team1.nbGoal=random()%7;
+    shared->tab[shared->i].team2.nbGoal=random()%7;
+    shared->i=(shared->i+1);
+    printf("%s : %d - %d : %s \t (tour %d)\n", shared->tab[shared->i].team1.name, shared->tab[shared->i].team1.nbGoal, shared->tab[shared->i].team2.nbGoal, shared->tab[shared->i].team2.name, n);
+    V(mutMatch);
+}
+
+void cleanup(int status, key_t key){
+    semfree(mutMatch);
+    shmfree(key);
+    exit(status); 
+}
+
 int main(int argc, char *argv[]){    
+
+    int nbMatch=NBMATCH;
 
     int fd;
     ssize_t desc;
@@ -19,7 +80,10 @@ int main(int argc, char *argv[]){
     char** teams=NULL;
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
+
     List l=new_list();
+    List pot1=new_list();
+    List pot2=new_list();
 
     if (argc!=2) {printf("Veuillez fournir le nom du fichier en argument.\n"); return 1;}
 
@@ -63,15 +127,21 @@ int main(int argc, char *argv[]){
             memcpy(line_buffer + line_pos, buffer + start, desc - start);
             line_pos += desc - start;
             line_buffer[line_pos] = '\0';
+            // Add the line to the array
+            if (numTeams == max_teams) {
+                // if the array is full, reallocate it to double its size
+                max_teams *= 2;
+                teams = (char**)realloc(teams, max_teams * sizeof(char*));
+            }
             teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
             numTeams++;
         }
     } while (desc>0);
 
     // print out the teams
-    for (int i = 0; i < numTeams; i++) {
-        printf("%s\n", teams[i]);
-    }
+    // for (int i = 0; i < numTeams; i++) {
+    //     printf("%s\n", teams[i]);
+    // }
 
     // Initialisation du générateur de nombres aléatoires
     srand(time(NULL));
@@ -92,10 +162,74 @@ int main(int argc, char *argv[]){
         free(teams[i]);
     }
     
-    print_list(l);
+    eclate(l, &pot1, &pot2);
 
+    key_t key = ftok("keyGen.xml", 1);
+    if (key == -1) {
+        perror("Erreur lors de la génération de la clé");
+        return 1;
+    }
+
+    shared = shmalloc(key, sizeof(Match));
+    if (shared==0)
+    {
+        perror("shmalloc failed");
+        return 5;
+        cleanup(5, key+4);
+    }
+    remplir(pot1, pot2);
+
+    mutMatch = semalloc(key+1, 1);
+    if (mutMatch==-1)
+    {
+        perror("semalloc failed");
+        return 6;
+        cleanup(6, key+4);
+    }
+
+    puts ("***** STRIKE <CR> TO START, THEN STOP, PROGRAM *****");
+    getchar();
+
+    // while (nbMatch>0)
+    // {
+    // création de n processus
+    int tour=nFork(nbMatch);
+    switch (tour)
+    {
+    case -1:
+        perror("Creation de processus");
+        return 7;
+        cleanup(7, key+4);
+        
+    case 0:
+        /* père */
+        puts("debut du père");
+        for (int i = 0; i < nbMatch; i++)
+        {
+            while(waitpid(0,0,0) < 0);
+        }
+        puts("fin du père");
+        return 0;
+        
+    default:
+        /* fils */
+        simule(tour);
+        return 0;
+    }
+    printf("fin du tour 1\n");
+   // }
+    
+    
+    //print_list(l);
     l=clear_list(l);
+    pot1=clear_list(pot1);
+    pot2=clear_list(pot2);
     free(teams);
+
+    /* now wait for the user to strike CR, then stop all tasks */
+    getchar();
+    sleep(1); /* enough if MAXTIME < 1s */
+    cleanup(0, key+4);
 
     return 0;
 }

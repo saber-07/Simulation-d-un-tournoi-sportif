@@ -3,6 +3,7 @@
 
 #define MAXMSGSIZE 1500
 
+int nFork (int nbProcs);
 int semalloc(key_t key, int valInit);
 void P(int semid); 
 void V(int semid);

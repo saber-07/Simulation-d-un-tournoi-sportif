@@ -158,3 +158,23 @@ List clear_list(List li)
     
     return new_list();
 }
+//--------------------------------------------------------------------------------------------------------------------------
+
+void eclate(List li, List *lp, List *lip)
+{
+    ListElement* current=li;
+    int i=0;
+    
+    if (current==NULL)
+        printf("cette list est vide");
+    else{
+        while (current != NULL) {
+            if (i%2==0)
+                *lp=push_front_list(*lp, current->name);
+            else
+                *lip=push_front_list(*lip, current->name);
+            current=current->next;
+            i++;
+    }
+}
+}
