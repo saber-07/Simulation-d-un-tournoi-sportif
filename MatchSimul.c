@@ -91,5 +91,17 @@ int main() {
 
     printf("Le vainqueur est : %s\n", tableau_gagnants[0].nom);
 
+    // Détachement du segment de mémoire partagée
+    if (shmdt(tableau_equipes) == -1) {
+        perror("Erreur lors du détachement du segment de mémoire partagée");
+        exit(1);
+    }
+
+    // Suppression du segment de mémoire partagée
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("Erreur lors de la suppression du segment de mémoire partagée");
+        exit(1);
+    }
+
     return 0;
 }
