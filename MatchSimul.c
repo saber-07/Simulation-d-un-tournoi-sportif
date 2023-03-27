@@ -1,15 +1,41 @@
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <string.h>
-#include <time.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#define TAILLE_TABLEAU 32
 
 typedef struct {
     char nom[50];
 } Equipe;
 
 int main() {
+    
+    // Création de la clé pour le segment de mémoire partagée
+    key_t cle = ftok(".", 'a');
+    if (cle == -1) {
+        perror("Erreur lors de la création de la clé");
+        exit(1);
+    }
+
+    // Création du segment de mémoire partagée
+    int shmid = shmget(cle, TAILLE_TABLEAU * sizeof(Equipe), IPC_CREAT | 0666);
+    if (shmid == -1) {
+        perror("Erreur lors de la création du segment de mémoire partagée");
+        exit(1);
+    }
+
+    // Attachement du segment de mémoire partagée à l'espace d'adressage du processus
+    Equipe* tableau_gagnants = (Equipe*) shmat(shmid, NULL, 0);
+    if (tableau_gagnants == (Equipe*) -1) {
+        perror("Erreur lors de l'attachement du segment de mémoire partagée");
+        exit(1);
+    }
+    
     char* noms[32] = {
         "Real Madrid", "Barcelone", "Manchester United", "Bayern Munich",
         "AC Milan", "Liverpool", "Juventus", "Chelsea",
@@ -22,7 +48,6 @@ int main() {
     };
 
     Equipe equipes[32];
-    Equipe gagnants[16];
 
     int i;
     for (i = 0; i < 32; i++) {
@@ -30,10 +55,8 @@ int main() {
     }
 
     int nbMatchs = 16;
-    int nbGagnants = 0;
 
     while (nbMatchs > 0) {
-        int nbGagnants = 0;
         for (int i = 0; i < nbMatchs; i++) {
             pid_t pid = fork();
 
@@ -45,26 +68,28 @@ int main() {
                 int score1 = rand() % 5;
                 int score2 = rand() % 5;
                 printf("%s %d - %d %s\n", equipes[i*2].nom, score1, score2, equipes[i*2+1].nom);
-                exit(score1 >= score2 ? 0 : 1); // Le processus enfant renvoie l'indice de l'équipe gagnante
+                
+                if (score1 >= score2) {
+                    tableau_gagnants[i] = equipes[i*2];
+                } // Le processus enfant renvoie l'indice de l'équipe gagnante
+                else {
+                    tableau_gagnants[i] = equipes[i*2 + 1];
+                }
+                exit(0);
             }
         }
         int status;
         for (i = 0; i < nbMatchs; i++) {
             wait(&status);
-            if (WIFEXITED(status)) {
-                int indiceGagnant = i*2 + WEXITSTATUS(status);
-                gagnants[nbGagnants] = equipes[indiceGagnant];
-                nbGagnants++;
-            }
         }
         for (i = 0; i < nbMatchs; i++) { 
-          equipes[i] = gagnants[i];
+          equipes[i] = tableau_gagnants[i];
         }
         printf("\nFin du tour %d\n\n", nbMatchs);
         nbMatchs /= 2;
     }
 
-    printf("Le vainqueur est : %s\n", gagnants[0].nom);
+    printf("Le vainqueur est : %s\n", tableau_gagnants[0].nom);
 
     return 0;
 }
