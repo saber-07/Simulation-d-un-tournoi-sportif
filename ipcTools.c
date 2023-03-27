@@ -9,7 +9,7 @@
 #include "ipcTools.h"
 
 int nFork (int nbProcs){
-    for (int i = 0; i < nbProcs; i++)
+    for (int i = 1; i <= nbProcs; i++)
     {
         int pid = fork();
 
@@ -20,7 +20,7 @@ int nFork (int nbProcs){
             return -1;
         
         case 0:
-            return nbProcs;
+            return i;
         }
     }
     return 0;

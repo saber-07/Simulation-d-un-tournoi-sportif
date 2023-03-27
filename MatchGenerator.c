@@ -45,20 +45,18 @@ void remplir(List l1, List l2){
         l1=l1->next;
         strcpy(shared->tab[i].team2.name, l2->name);
         l2=l2->next;
-        printf("%s\t%s\n", l1->name, l2->name);
-        i++;
     }
     shared->i=0;
 }
 
-void simule(int n){
+void simule(int id){
     srand(getpid());
-    usleep(random()%MAXTIME); // simule une execution
+    usleep(rand()%MAXTIME); // simule une execution
     P(mutMatch);
-    shared->tab[shared->i].team1.nbGoal=random()%7;
-    shared->tab[shared->i].team2.nbGoal=random()%7;
+    shared->tab[shared->i].team1.nbGoal=rand()%5;
+    shared->tab[shared->i].team2.nbGoal=rand()%3;
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[shared->i].team1.name, shared->tab[shared->i].team1.nbGoal, shared->tab[shared->i].team2.nbGoal, shared->tab[shared->i].team2.name, id);
     shared->i=(shared->i+1);
-    printf("%s : %d - %d : %s \t (tour %d)\n", shared->tab[shared->i].team1.name, shared->tab[shared->i].team1.nbGoal, shared->tab[shared->i].team2.nbGoal, shared->tab[shared->i].team2.name, n);
     V(mutMatch);
 }
 
@@ -190,36 +188,31 @@ int main(int argc, char *argv[]){
     puts ("***** STRIKE <CR> TO START, THEN STOP, PROGRAM *****");
     getchar();
 
-    // while (nbMatch>0)
-    // {
-    // création de n processus
-    int tour=nFork(nbMatch);
-    switch (tour)
+    while (nbMatch>0)
     {
-    case -1:
-        perror("Creation de processus");
-        return 7;
-        cleanup(7, key+4);
-        
-    case 0:
-        /* père */
-        puts("debut du père");
-        for (int i = 0; i < nbMatch; i++)
-        {
-            while(waitpid(0,0,0) < 0);
+        // création de n processus
+        int idMatch=nFork(nbMatch);
+        if(idMatch==-1){
+            perror("Creation de processus");
+            cleanup(7, key+4);
+            return 7;
         }
-        puts("fin du père");
-        return 0;
-        
-    default:
-        /* fils */
-        simule(tour);
-        return 0;
+        if(idMatch>0){
+            /* fils */
+            simule(idMatch);
+            return 0;
+        }
+        printf("fin du tour\n");
+        nbMatch=nbMatch/2;
+   }
+    
+    /* père */
+    puts("debut du père");
+    for (int i = 0; i < nbMatch; i++)
+    {
+        while(waitpid(0,0,0) < 0);
     }
-    printf("fin du tour 1\n");
-   // }
-    
-    
+
     //print_list(l);
     l=clear_list(l);
     pot1=clear_list(pot1);
