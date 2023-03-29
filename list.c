@@ -35,7 +35,7 @@ int list_length(List li)
 }
 //--------------------------------------------------------------------------------------------------------------------------
 
-List push_back_list(List li, char x[NAMEZIZE])
+List push_back_list(List li, char x[NAMEZIZE], int st)
 {
     ListElement *element;
     
@@ -47,6 +47,7 @@ List push_back_list(List li, char x[NAMEZIZE])
     }
     
     strcpy(element->name, x);
+    element->status=st;
     element->next=NULL;
     
     if(list_is_empty(li)) return element;
@@ -63,7 +64,7 @@ List push_back_list(List li, char x[NAMEZIZE])
     }
 }
 //--------------------------------------------------------------------------------------------------------------------------
-List push_front_list(List li, char x[NAMEZIZE])
+List push_front_list(List li, char x[NAMEZIZE], int st)
 {
     ListElement *element;
     
@@ -75,6 +76,7 @@ List push_front_list(List li, char x[NAMEZIZE])
     }
     
     strcpy(element->name, x);
+    element->status=st;
     
     if(list_is_empty(li))
         element->next=NULL;
@@ -157,24 +159,4 @@ List clear_list(List li)
         li=pop_front_list(li);
     
     return new_list();
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-void eclate(List li, List *lp, List *lip)
-{
-    ListElement* current=li;
-    int i=0;
-    
-    if (current==NULL)
-        printf("cette list est vide");
-    else{
-        while (current != NULL) {
-            if (i%2==0)
-                *lp=push_front_list(*lp, current->name);
-            else
-                *lip=push_front_list(*lip, current->name);
-            current=current->next;
-            i++;
-    }
-}
 }

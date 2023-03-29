@@ -29,23 +29,26 @@ void simule(int id){
     usleep(random()%MAXTIME); // simule une execution
     P(mutMatch);
     List p=shared;
-    for (int i = 0; i < id; i++)
-    {
+    
+    while (p->status==0)
         p=p->next;
-    }
+    List eq1=p;
+    p=p->next;
+    while (p->status==0)
+        p=p->next;
+    List eq2=p;
+    
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
-    if (nbGoal1<nbGoal2)
-    {
-        p->status=0;
-        p->next->status=1;
+    if (nbGoal2<nbGoal1){
+        printf("%s\t %d\n", eq2->name, eq2->status);
+        eq2->status=0;
     }
-    else
-    {
-        p->status=1;
-        p->next->status=0;
+    else{
+        printf("%s\t %d\n", eq1->name, eq1->status);
+        eq1->status=0;
     }
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", p->name, nbGoal1, nbGoal2, p->next->name, id);
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", eq1->name, nbGoal1, nbGoal2, eq2->name, id);
 
     V(mutMatch);
 }
@@ -144,10 +147,10 @@ int main(int argc, char *argv[]){
     }
 
     for (int i = 0; i < numTeams; i++) {
-        l=push_back_list(l, teams[i]);
+        l=push_front_list(l, teams[i], 1);
         free(teams[i]);
     }
-    
+    print_list(l);
 
     key_t key = ftok("keyGen.xml", 1);
     if (key == -1) {
