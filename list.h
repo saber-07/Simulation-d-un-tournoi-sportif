@@ -16,6 +16,7 @@ typedef enum {false, true} bool;
 typedef struct ListElement
 { 
     char name[NAMEZIZE+1];
+    int status;
     struct ListElement *next;
 } ListElement, *List;
 

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/wait.h>
+#include <sys/uio.h>
 
 #include "ipcTools.h"
 #include "list.h"
@@ -17,46 +18,35 @@
 #define MAXTIME 500000 // temps max pour simule()
 
 // Var partagé
-typedef struct{
-    char name[TEAMNAMESIZE+1];
-    int nbGoal;
-}TeamMatch;
-typedef struct
-{
-    TeamMatch team1, team2;
-    int n;
-} Match;
-
-typedef struct
-{
-    Match tab[NBMATCH];
-    int i;
-} Shared;
-Shared *shared;
+ListElement *shared;
 
 // sémaphores
 int mutMatch;
 
-void remplir(List l1, List l2){
-
-    for(int i=0; i<NBMATCH; i++)
-    {
-        strcpy(shared->tab[i].team1.name, l1->name);
-        l1=l1->next;
-        strcpy(shared->tab[i].team2.name, l2->name);
-        l2=l2->next;
-    }
-    shared->i=0;
-}
-
 void simule(int id){
-    srand(getpid());
-    usleep(rand()%MAXTIME); // simule une execution
+
+    srandom(getpid());
+    usleep(random()%MAXTIME); // simule une execution
     P(mutMatch);
-    shared->tab[shared->i].team1.nbGoal=rand()%5;
-    shared->tab[shared->i].team2.nbGoal=rand()%3;
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[shared->i].team1.name, shared->tab[shared->i].team1.nbGoal, shared->tab[shared->i].team2.nbGoal, shared->tab[shared->i].team2.name, id);
-    shared->i=(shared->i+1);
+    List p=shared;
+    for (int i = 0; i < id; i++)
+    {
+        p=p->next;
+    }
+    int nbGoal1=random()%5;
+    int nbGoal2=random()%7;
+    if (nbGoal1<nbGoal2)
+    {
+        p->status=0;
+        p->next->status=1;
+    }
+    else
+    {
+        p->status=1;
+        p->next->status=0;
+    }
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", p->name, nbGoal1, nbGoal2, p->next->name, id);
+
     V(mutMatch);
 }
 
@@ -80,8 +70,6 @@ int main(int argc, char *argv[]){
     int numTeams=0;
 
     List l=new_list();
-    List pot1=new_list();
-    List pot2=new_list();
 
     if (argc!=2) {printf("Veuillez fournir le nom du fichier en argument.\n"); return 1;}
 
@@ -160,7 +148,6 @@ int main(int argc, char *argv[]){
         free(teams[i]);
     }
     
-    eclate(l, &pot1, &pot2);
 
     key_t key = ftok("keyGen.xml", 1);
     if (key == -1) {
@@ -168,14 +155,14 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    shared = shmalloc(key, sizeof(Match));
+    shared = shmalloc(key, sizeof(ListElement));
     if (shared==0)
     {
         perror("shmalloc failed");
         return 5;
         cleanup(5, key+4);
     }
-    remplir(pot1, pot2);
+    shared=l;
 
     mutMatch = semalloc(key+1, 1);
     if (mutMatch==-1)
@@ -185,12 +172,12 @@ int main(int argc, char *argv[]){
         cleanup(6, key+4);
     }
 
-    puts ("***** STRIKE <CR> TO START, THEN STOP, PROGRAM *****");
+    puts ("***** STRIKE <CR> TO START, PROGRAM *****");
     getchar();
 
     while (nbMatch>0)
     {
-        // création de n processus
+    // création de n processus
         int idMatch=nFork(nbMatch);
         if(idMatch==-1){
             perror("Creation de processus");
@@ -202,12 +189,11 @@ int main(int argc, char *argv[]){
             simule(idMatch);
             return 0;
         }
-        printf("fin du tour\n");
-        nbMatch=nbMatch/2;
+    
+    nbMatch=nbMatch/2;
    }
     
     /* père */
-    puts("debut du père");
     for (int i = 0; i < nbMatch; i++)
     {
         while(waitpid(0,0,0) < 0);
@@ -215,11 +201,10 @@ int main(int argc, char *argv[]){
 
     //print_list(l);
     l=clear_list(l);
-    pot1=clear_list(pot1);
-    pot2=clear_list(pot2);
     free(teams);
 
     /* now wait for the user to strike CR, then stop all tasks */
+    puts ("***** STRIKE <CR> TO STOP, PROGRAM *****");
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
     cleanup(0, key+4);
