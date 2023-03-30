@@ -6,6 +6,7 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "list.h"
 
 List new_list (void){return NULL;}
@@ -34,7 +35,7 @@ int list_length(List li)
 }
 //--------------------------------------------------------------------------------------------------------------------------
 
-List push_back_list(List li, int x)
+List push_back_list(List li, char x[NAMEZIZE], int st)
 {
     ListElement *element;
     
@@ -45,7 +46,8 @@ List push_back_list(List li, int x)
         exit(EXIT_FAILURE);
     }
     
-    element->info=x;
+    strcpy(element->name, x);
+    element->status=st;
     element->next=NULL;
     
     if(list_is_empty(li)) return element;
@@ -62,7 +64,7 @@ List push_back_list(List li, int x)
     }
 }
 //--------------------------------------------------------------------------------------------------------------------------
-List push_front_list(List li, int x)
+List push_front_list(List li, char x[NAMEZIZE], int st)
 {
     ListElement *element;
     
@@ -73,7 +75,8 @@ List push_front_list(List li, int x)
         exit(EXIT_FAILURE);
     }
     
-    element->info=x;
+    strcpy(element->name, x);
+    element->status=st;
     
     if(list_is_empty(li))
         element->next=NULL;
@@ -144,8 +147,8 @@ void  print_list (List li)
         return;
     }
     while(li !=NULL)
-     {  printf("[%d]",li->info);
-         li=li->next;   }
+     {  printf("[%s]\n",li->name);
+        li=li->next;   }
      printf("\n");
 }
 //--------------------------------------------------------------------------------------------------------------------------
@@ -156,138 +159,4 @@ List clear_list(List li)
         li=pop_front_list(li);
     
     return new_list();
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-List insert(List li, int x)
-{
-    ListElement *temp=li, *element, *before=li;
-    
-    element=malloc(sizeof(*element));
-    
-    if (element==NULL) {
-        fprintf(stderr, "probléme d'allocation dynamique. \n");
-        exit(EXIT_FAILURE);
-    }
-    element->info = x;
-    element->next=NULL;
-    
-    if (list_is_empty(li)) {
-        return element;
-    }
-    else{
-        while (temp != NULL && temp->info < x) {
-            before = temp;
-            temp = temp->next;
-        }
-        
-        if (temp == NULL) {
-            before->next = element;
-            return li;
-        }
-        else if (temp->info>x && before != NULL){
-            before->next = element;
-            element->next = temp;
-            return li;
-        }
-        else{
-            element->next = li;
-            return element;
-        }
-    }
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-List fusion(List li1, List li2){
-    List li=new_list(), temp;
-    
-    if (li1->info < li2->info){
-        li = li1;
-        li1 = li1->next;
-    }
-    else {
-        li = li2;
-        li2 = li2->next;
-    }
-    temp = li;
-    
-    while (li1 != NULL && li2 != NULL) {
-        if (li1->info < li2->info){
-            temp->next = li1;
-            li1 = li1->next;
-        }
-        else{
-            temp->next = li2;
-            li2 = li2->next;
-        }
-        temp = temp->next;
-    }
-    
-    if (li2 == NULL)
-        temp->next = li1;
-    
-    if (li1 == NULL)
-        temp->next = li2;
-    
-    return li;
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-List supp_oc(List li, int x)
-{
-    ListElement *temp=new_list(), *before=li, *current=li->next;
-    
-    while (current != NULL) {
-        if (current->info == x) {
-            temp = current;
-            before->next = current->next;
-            current = before->next;
-            free(temp);
-        }
-        else{
-            before = current;
-            current = current->next;
-        }
-    }
-    
-    return li;
-}
-//--------------------------------------------------------------------------------------------------------------------------
-
-void eclate(List *li, List *lp, List *lip)
-{
-    ListElement *temp=*li, *current1=NULL, *current2=NULL;
-    
-    if (temp==NULL)
-        printf("cette list est vide");
-    else{
-        while (temp != NULL) {
-            if (temp->info %2 == 0) {
-                if (current1 == NULL) {
-                    *lp = temp;
-                    current1 = temp;
-                }
-                else{
-                    current1->next = temp;
-                    current1 = current1->next;
-                }
-            }
-            else{
-                if (current2 == NULL) {
-                    *lip = temp;
-                    current2 = temp;
-                }
-                else{
-                    current2->next = temp;
-                    current2 = current2->next;
-                }
-            }
-            temp = temp->next;
-        }
-        if (current1 != NULL)
-            current1->next = NULL;
-        if (current2 != NULL)
-            current2->next = NULL;
-        *li = NULL;
-    }
 }
