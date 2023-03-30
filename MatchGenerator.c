@@ -13,12 +13,19 @@
 #include "ipcTools.h"
 #include "list.h"
 
-#define NBMATCH 8
-#define TEAMNAMESIZE 30
-#define MAXTIME 500000 // temps max pour simule()
-
 // Var partagé
-ListElement *shared;
+typedef struct 
+{
+    char name[NAMEZIZE+1];
+    int status; // 1:qualifié, 0:non-qualifié
+}Team;
+
+typedef struct
+{
+    Team tab[TEAMNAMESIZE];
+    int i1, i2;
+}Shared;
+Shared *shared;
 
 // sémaphores
 int mutMatch;
@@ -26,30 +33,31 @@ int mutMatch;
 void simule(int id){
 
     srandom(getpid());
-    usleep(random()%MAXTIME); // simule une execution
+    // simule une execution
     P(mutMatch);
-    List p=shared;
-    
-    while (p->status==0)
-        p=p->next;
-    List eq1=p;
-    p=p->next;
-    while (p->status==0)
-        p=p->next;
-    List eq2=p;
-    
+    shared->i1=0;
+    while (shared->tab[shared->i1].status!=1)
+        shared->i1++;
+    shared->i2=shared->i1+1;
+    while (shared->tab[shared->i2].status!=1)
+        shared->i2++;
+    shared->tab[shared->i1].status=-1;
+    shared->tab[shared->i2].status=-1;
+    printf("%d, %d\n", shared->i1, shared->i2);
+    V(mutMatch);
+    sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
-    if (nbGoal2<nbGoal1){
-        printf("%s\t %d\n", eq2->name, eq2->status);
-        eq2->status=0;
-    }
-    else{
-        printf("%s\t %d\n", eq1->name, eq1->status);
-        eq1->status=0;
-    }
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", eq1->name, nbGoal1, nbGoal2, eq2->name, id);
-
+    usleep(random()%MAXTIME);
+    P(mutMatch);
+    printf("%d, %d\n", shared->i1, shared->i2);
+    shared->tab[shared->i1].status=1;
+    shared->tab[shared->i2].status=1;
+    if (nbGoal2<nbGoal1)
+        shared->tab[shared->i2].status=0;
+    else
+        shared->tab[shared->i1].status=0;
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[shared->i1].name, nbGoal1, nbGoal2, shared->tab[shared->i2].name, id);
     V(mutMatch);
 }
 
@@ -71,8 +79,6 @@ int main(int argc, char *argv[]){
     char** teams=NULL;
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
-
-    List l=new_list();
 
     if (argc!=2) {printf("Veuillez fournir le nom du fichier en argument.\n"); return 1;}
 
@@ -128,9 +134,9 @@ int main(int argc, char *argv[]){
     } while (desc>0);
 
     // print out the teams
-    // for (int i = 0; i < numTeams; i++) {
-    //     printf("%s\n", teams[i]);
-    // }
+    for (int i = 0; i < numTeams; i++) {
+        printf("%s\n", teams[i]);
+    }
 
     // Initialisation du générateur de nombres aléatoires
     srand(time(NULL));
@@ -146,26 +152,26 @@ int main(int argc, char *argv[]){
         teams[j] = temp;
     }
 
-    for (int i = 0; i < numTeams; i++) {
-        l=push_front_list(l, teams[i], 1);
-        free(teams[i]);
-    }
-    print_list(l);
-
     key_t key = ftok("keyGen.xml", 1);
     if (key == -1) {
         perror("Erreur lors de la génération de la clé");
         return 1;
     }
 
-    shared = shmalloc(key, sizeof(ListElement));
+    shared = shmalloc(key, sizeof(Shared));
     if (shared==0)
     {
         perror("shmalloc failed");
         return 5;
         cleanup(5, key+4);
     }
-    shared=l;
+    for (int i = 0; i < NBMATCH*2; i++) {
+        strcpy(shared->tab[i].name, teams[i]);
+        shared->tab[i].status=1;
+        free(teams[i]);
+    }
+    shared->i1=0;
+    shared->i2=0;
 
     mutMatch = semalloc(key+1, 1);
     if (mutMatch==-1)
@@ -175,12 +181,12 @@ int main(int argc, char *argv[]){
         cleanup(6, key+4);
     }
 
-    puts ("***** STRIKE <CR> TO START, PROGRAM *****");
+    puts ("***** STRIKE <CR> TO START, STOP THE PROGRAM *****");
     getchar();
 
     while (nbMatch>0)
     {
-    // création de n processus
+        // création de n processus
         int idMatch=nFork(nbMatch);
         if(idMatch==-1){
             perror("Creation de processus");
@@ -192,7 +198,6 @@ int main(int argc, char *argv[]){
             simule(idMatch);
             return 0;
         }
-    
     nbMatch=nbMatch/2;
    }
     
@@ -202,15 +207,11 @@ int main(int argc, char *argv[]){
         while(waitpid(0,0,0) < 0);
     }
 
-    //print_list(l);
-    l=clear_list(l);
-    free(teams);
-
     /* now wait for the user to strike CR, then stop all tasks */
-    puts ("***** STRIKE <CR> TO STOP, PROGRAM *****");
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
     cleanup(0, key+4);
+    free(teams);
 
     return 0;
 }

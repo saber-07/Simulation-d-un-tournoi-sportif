@@ -3,25 +3,9 @@
 
 #define MAXMSGSIZE 1500
 #define NBMATCH 8
-#define TEAMNAMESIZE 30
+#define TEAMNAMESIZE 32
 #define MAXTIME 500000 // temps max pour simule()
 
-// typedef struct{
-//     char name[TEAMNAMESIZE+1];
-//     int nbGoal;
-// }TeamMatch;
-// typedef struct
-// {
-//     TeamMatch team1, team2;
-//     int n;
-// } Match;
-
-// static struct 
-// {
-//     long type;
-//     Match msg[NBMATCH];
-//     int i;
-// }buffer;
 
 int nFork (int nbProcs);
 int semalloc(key_t key, int valInit);
