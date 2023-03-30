@@ -5,6 +5,9 @@
 #define NBMATCH 8
 #define TEAMNAMESIZE 32
 #define MAXTIME 500000 // temps max pour simule()
+#define NAMEZIZE 30
+#define BUFFER_SIZE 1024
+#define TEAMS 48
 
 
 int nFork (int nbProcs);

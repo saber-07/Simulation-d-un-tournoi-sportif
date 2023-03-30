@@ -11,7 +11,6 @@
 #include <sys/uio.h>
 
 #include "ipcTools.h"
-#include "list.h"
 
 // Var partagé
 typedef struct 
@@ -23,7 +22,6 @@ typedef struct
 typedef struct
 {
     Team tab[TEAMNAMESIZE];
-    int i1, i2;
 }Shared;
 Shared *shared;
 
@@ -35,29 +33,32 @@ void simule(int id){
     srandom(getpid());
     // simule une execution
     P(mutMatch);
-    shared->i1=0;
-    while (shared->tab[shared->i1].status!=1)
-        shared->i1++;
-    shared->i2=shared->i1+1;
-    while (shared->tab[shared->i2].status!=1)
-        shared->i2++;
-    shared->tab[shared->i1].status=-1;
-    shared->tab[shared->i2].status=-1;
-    printf("%d, %d\n", shared->i1, shared->i2);
+    int i1=0;
+    while (shared->tab[i1].status!=1){
+        i1++;
+    }
+    int i2=i1+1;
+    while (shared->tab[i2].status!=1){
+        i2++;
+    }
+    shared->tab[i1].status=-1;
+    shared->tab[i2].status=-1;
+    // printf("%d, %d\n", i1, i2);
     V(mutMatch);
+    // printf("%d, %d\n", i1, i2);
     sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
     P(mutMatch);
-    printf("%d, %d\n", shared->i1, shared->i2);
-    shared->tab[shared->i1].status=1;
-    shared->tab[shared->i2].status=1;
+    shared->tab[i1].status=1;
+    shared->tab[i2].status=1;
     if (nbGoal2<nbGoal1)
-        shared->tab[shared->i2].status=0;
+        shared->tab[i2].status=0;
     else
-        shared->tab[shared->i1].status=0;
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[shared->i1].name, nbGoal1, nbGoal2, shared->tab[shared->i2].name, id);
+        shared->tab[i1].status=0;
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
+    // printf("%d, %d\n", i1, i2);
     V(mutMatch);
 }
 
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]){
     } while (desc>0);
 
     // print out the teams
-    for (int i = 0; i < numTeams; i++) {
+    for (int i = 0; i < NBMATCH*2; i++) {
         printf("%s\n", teams[i]);
     }
 
@@ -165,13 +166,11 @@ int main(int argc, char *argv[]){
         return 5;
         cleanup(5, key+4);
     }
-    for (int i = 0; i < NBMATCH*2; i++) {
+    for (int i = 0; i < numTeams; i++) {
         strcpy(shared->tab[i].name, teams[i]);
         shared->tab[i].status=1;
         free(teams[i]);
     }
-    shared->i1=0;
-    shared->i2=0;
 
     mutMatch = semalloc(key+1, 1);
     if (mutMatch==-1)
@@ -198,15 +197,20 @@ int main(int argc, char *argv[]){
             simule(idMatch);
             return 0;
         }
-    nbMatch=nbMatch/2;
-   }
-    
-    /* père */
-    for (int i = 0; i < nbMatch; i++)
-    {
-        while(waitpid(0,0,0) < 0);
+        /* père */
+        for (int i = 0; i < nbMatch; i++)
+        {
+            while(waitpid(0,0,0) < 0);
+        }
+        printf("fin tour %d\n",nbMatch);
+        for (int i = 0; i < NBMATCH*2; i++)
+        {
+            printf("%s\t%d\n", shared->tab[i].name, shared->tab[i].status);
+        }
+        
+        nbMatch=nbMatch/2;
     }
-
+    
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
