@@ -11,7 +11,9 @@
 #define MAX_equipe 32
 #define max_nom 50
 #define duree 90
-#define cle 1234
+
+
+key_t key = ftok("/etc/passwd", 1234);
 
 // Création de la structure qui contiendra les equipes. (j'ai choisi une liste
 // chainée)
@@ -66,23 +68,21 @@ void simulation_match(Match *match, Equipe *equipe) {
          match->score2, equipe[match->equipe2].nom);
 }
 
-void simulation_tournoi(int num_teams, Equipe *equipe) {
-  int i, j, k;
-  int num_tour = num_teams - 1;
-  Match match[num_tour * num_teams / 2];
+void simulation_tournoi_elimination_directe(int num_teams, Equipe *equipe) {
+  int i, j, k, tour;
+  int num_tour = log2(num_teams);
+  Match match[num_teams / 2];
   k = 0;
-  for (i = 0; i < num_teams; i++) {
-    for (j = 0; j < num_teams; j++) {
-      match[k].equipe1 = i;
-      match[k].equipe2 = j;
-      match[k].duration = duree;
-      match[k].score1 = 0;
-      match[k].score2 = 0;
-      k++;
-    }
+  for (i = 0; i < num_teams; i += 2) {
+    match[k].equipe1 = i;
+    match[k].equipe2 = i + 1;
+    match[k].duration = duree;
+    match[k].score1 = 0;
+    match[k].score2 = 0;
+    k++;
   }
   // Création de la mémoire partagée pour les resultats de match
-  int shm_id =shmget(cle, sizeof(Match) * num_tour * num_teams / 2, IPC_CREAT | 0666);
+  int shm_id = shmget(key, sizeof(Match) * num_teams / 2, IPC_CREAT | 0666);
   if (shm_id < 0) {
     perror("erreur shmget");
     exit(1);
@@ -94,32 +94,54 @@ void simulation_tournoi(int num_teams, Equipe *equipe) {
   }
 
   // Utilisation des processus pour simuler le tournoi
-  for (i = 0; i < num_tour * num_teams / 2; i++) {
-    pid_t pid = fork();
-    if (pid < 0) {
-      perror("erreur fork");
-      exit(1);
-    } else if (pid == 0) {
-      simulation_match(&match[i], equipe);
-      resultat_match[i] = match[i];
-      exit(0);
+  for (tour = 0; tour < num_tour; tour++) {
+    for (i = 0; i < num_teams / 2; i++) {
+      pid_t pid = fork();
+      if (pid < 0) {
+        perror("erreur fork");
+        exit(1);
+      } else if (pid == 0) {
+        simulation_match(&match[i], equipe);
+        resultat_match[i] = match[i];
+        exit(0);
+      }
+    }
+    // Attente des processus fils
+    for (i = 0; i < num_teams / 2; i++) {
+      int status;
+      pid_t pid = wait(&status);
+      if (pid < 0) {
+        perror("erreur wait");
+        exit(1);
+      }
+      if (status != 0) {
+        fprintf(stderr, "Erreur wait %d\n", status);
+        exit(1);
+      }
+    }
+    // Mise à jour des équipes qualifiées pour le tour suivant
+    k = 0;
+    for (i = 0; i < num_teams / 2; i++) {
+      if (resultat_match[i].score1 > resultat_match[i].score2) {
+        equipes_qualifiees[tour + 1][k] = resultat_match[i].equipe1;
+        k++;
+      } else {
+        equipes_qualifiees[tour + 1][k] = resultat_match[i].equipe2;
+        k++;
+      }
+    }
+    // Préparation des matchs du tour suivant
+    k = 0;
+    for (i = 0; i < num_teams / 2; i += 2) {
+      match[k].equipe1 = equipes_qualifiees[tour + 1][i];
+      match[k].equipe2 = equipes_qualifiees[tour + 1][i + 1];
+      match[k].duration = duree;
+      match[k].score1 = 0;
+      match[k].score2 = 0;
+      k++;
     }
   }
-
-  // Attente des processus fils
-  for (i = 0; i < num_tour * num_teams / 2; i++) {
-    int status;
-    pid_t pid = wait(&status);
-    if (pid < 0) {
-      perror("erreur wait");
-      exit(1);
-    }
-    if (status != 0) {
-      fprintf(stderr, "Erreur wait %d\n", status);
-      exit(1);
-    }
-  }
-  // Suppression de la memoire partagée
+ // Suppression de la memoire partagée
   if (shmdt(resultat_match) == -1) {
     perror("erreur shmdt");
     exit(1);
@@ -128,7 +150,45 @@ void simulation_tournoi(int num_teams, Equipe *equipe) {
     perror("erreur shmctl");
     exit(1);
   }
+
+  // Elimination directe
+  Match *elim_match = (Match *) malloc(sizeof(Match) * num_tour);
+  int num_elim_match = num_teams / 2;
+
+  while (num_elim_match > 0) {
+    int num_vainqueurs = 0;
+    for (i = 0; i < num_elim_match; i++) {
+      int index = i * 2;
+      int equipe1 = elim_match[index].score1 > elim_match[index].score2 ? elim_match[index].equipe1 : elim_match[index].equipe2;
+      int equipe2 = elim_match[index + 1].score1 > elim_match[index + 1].score2 ? elim_match[index + 1].equipe1 : elim_match[index + 1].equipe2;
+      int duration = duree;
+      int score1 = 0;
+      int score2 = 0;
+
+      Match match = { equipe1, equipe2, duration, score1, score2 };
+      simulation_match(&match, equipe);
+      elim_match[i] = match;
+
+      if (match.score1 > match.score2) {
+        num_vainqueurs++;
+      }
+    }
+    num_elim_match /= 2;
+    if (num_vainqueurs == 0) {
+      printf("Erreur : toutes les équipes ont perdu.\n");
+      exit(1);
+    }
+  }
+
+  // Affichage des résultats
+  printf("Résultats de l'élimination directe :\n");
+  for (i = 0; i < num_tour; i++) {
+    printf("Match %d : Equipe %d %d - %d Equipe %d\n", i + 1, elim_match[i].equipe1, elim_match[i].score1, elim_match[i].score2, elim_match[i].equipe2);
+  }
+
+  free(elim_match);
 }
+
 
 int main(int argc, char *argv[]) {
   int num_teams = 0;
