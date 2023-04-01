@@ -46,8 +46,11 @@ void simule(int id, int t){
     shared->tab[i2].status=-1;
     V(mutMatch);
     //------------------------------------------------------------------------------
-    P(tabSem[t-1][2*id]);
-    P(tabSem[t-1][(2*id)+1]);
+    int k = id-1;
+    P(tabSem[t-1][2*k]);
+    P(tabSem[t-1][(2*k)+1]);
+    printf("%d, %d\n",t-1,2*k);
+    printf("%d, %d\n",t-1,(2*k)+1);
     sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
@@ -61,7 +64,7 @@ void simule(int id, int t){
     else
         shared->tab[i1].status=0;
     printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
-    V(tabSem[t][id]);
+    V(tabSem[t][k]);
     V(mutMatch);
 }
 
@@ -170,7 +173,7 @@ int main(int argc, char *argv[]){
             }
         }
         /* Traiter la dernière ligne */
-        if (start < desc) {
+        if(start < desc) {
             memcpy(line_buffer + line_pos, buffer + start, desc - start);
             line_pos += desc - start;
             line_buffer[line_pos] = '\0';
@@ -275,7 +278,7 @@ int main(int argc, char *argv[]){
     puts ("***** STRIKE <CR> TO START, STOP THE PROGRAM *****");
     getchar();
 
-    int tour=0;
+    int tour=1;
     n=nbEquipes;
     while (n>0)
     {
@@ -294,7 +297,7 @@ int main(int argc, char *argv[]){
             simule(idMatch, tour);
             return 0;
         }
-        printf("fin tour %d\n",n);
+        printf("fin tour %d\n",tour);
         // for (int i = 0; i < p1*2; i++)
         // {
         //     printf("%s\t%d\n", shared->tab[i].name, shared->tab[i].status);
