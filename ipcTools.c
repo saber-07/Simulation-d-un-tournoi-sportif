@@ -48,18 +48,17 @@ int semalloc(key_t key, int valInit){
 }
 
 static struct sembuf sbP={0, -1, 0};
-
 void P(int semid){
     int result = semop(semid, &sbP, 0);
     if (result==-1) perror("P");
 }
 
 static struct sembuf sbV={0, 1, 0};
-
 void V(int semid){
     int result = semop(semid, &sbV, 0);
     if (result==-1) perror("V");
 }
+
 int semfree(int semid){
     return semctl(semid,0,IPC_RMID,0);
 }

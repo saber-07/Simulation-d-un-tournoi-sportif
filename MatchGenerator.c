@@ -26,7 +26,7 @@ typedef struct
 Shared *shared;
 
 // sémaphores
-int **tabSem;
+int tabSem[4][4];
 int mutMatch;
 
 void simule(int id, int t){
@@ -49,13 +49,13 @@ void simule(int id, int t){
     int k = id-1;
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
-    printf("%d, %d\n",t-1,2*k);
-    printf("%d, %d\n",t-1,(2*k)+1);
+    printf("%d, %d\n",tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
     sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
     V(tabSem[t][k]);
+    printf("%d\n", tabSem[t][k]);
     //------------------------------------------------------------------------------
     P(mutMatch);
     shared->tab[i1].status=1;
@@ -235,35 +235,63 @@ int main(int argc, char *argv[]){
         cleanup(6, key+4, (int) log2(nbEquipes));
     }
 
+    // int n=nbEquipes/2;
+    // int nbtour = (int) log2(nbEquipes);
+    // printf("%d\n", nbtour);
+    // tabSem = malloc(sizeof(int *) * nbtour);
+    // for (int i = 0; i <nbtour; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         tabSem[j] = (int *)malloc(sizeof(int) * n);
+    //         if (i==0)
+    //         {
+    //             tabSem[i][j] = semalloc(key*i+j, 1);
+    //             if (tabSem[i][j] == -1)
+    //             {
+    //                 perror("semalloc failed");
+    //                 return 6;
+    //                 cleanup(6, key*i+j, nbtour);
+    //             }
+    //         }else{
+    //             tabSem[i][j] = semalloc(key*i+j, 0);
+    //             if (tabSem[i][j] == -1)
+    //             {
+    //                 perror("semalloc failed");
+    //                 return 6;
+    //                 cleanup(6, key*i+j, nbtour);
+    //             }
+    //         }
+    //     }
+    //     n/=2;
+    // }
+
     int n=nbEquipes/2;
     int nbtour = (int) log2(nbEquipes);
-    printf("%d\n", nbtour);
-    tabSem = malloc(sizeof(int *) * nbtour);
+
     for (int i = 0; i <nbtour; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            tabSem[j] = (int *)malloc(sizeof(int) * n);
             if (i==0)
             {
-                tabSem[i][j] = semalloc(key + 1, 1);
+                tabSem[i][j] = semalloc(key*i+j, 1);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    return 6;
-                    cleanup(6, key + 4, nbtour);
+                    semfree(key*i+j);
+                    exit(5);
                 }
             }else{
-                tabSem[i][j] = semalloc(key + 1, 0);
+                tabSem[i][j] = semalloc(key*i+j, 0);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    return 6;
-                    cleanup(6, key + 4, nbtour);
+                    semfree(key*i+j);
+                    exit(5);
                 }
             }
         }
-        n/=2;
     }
 
     n=nbEquipes/2;
