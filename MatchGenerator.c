@@ -9,7 +9,7 @@
 #include <sys/ipc.h>
 #include <sys/wait.h>
 #include <sys/uio.h>
-
+#include <math.h>
 #include "ipcTools.h"
 
 // Var partagé
@@ -26,9 +26,10 @@ typedef struct
 Shared *shared;
 
 // sémaphores
+int **tabSem;
 int mutMatch;
 
-void simule(int id){
+void simule(int id, int t){
 
     srandom(getpid());
     // simule une execution
@@ -43,12 +44,49 @@ void simule(int id){
     }
     shared->tab[i1].status=-1;
     shared->tab[i2].status=-1;
-    // printf("%d, %d\n", i1, i2);
     V(mutMatch);
-    // printf("%d, %d\n", i1, i2);
+    //------------------------------------------------------------------------------
+    P(tabSem[t-1][2*id]);
+    P(tabSem[t-1][(2*id)+1]);
     sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
+    usleep(random()%MAXTIME);
+    //------------------------------------------------------------------------------
+    P(mutMatch);
+    shared->tab[i1].status=1;
+    shared->tab[i2].status=1;
+    if (nbGoal2<nbGoal1)
+        shared->tab[i2].status=0;
+    else
+        shared->tab[i1].status=0;
+    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
+    V(tabSem[t][id]);
+    V(mutMatch);
+}
+
+void simule_man(int id){
+    int nbGoal1, nbGoal2;
+
+    srandom(getpid());
+    // simule une execution
+    P(mutMatch);
+    int i1=0;
+    while (shared->tab[i1].status!=1){
+        i1++;
+    }
+    int i2=i1+1;
+    while (shared->tab[i2].status!=1){
+        i2++;
+    }
+    shared->tab[i1].status=-1;
+    shared->tab[i2].status=-1;
+    printf("veillez saisir le score de l'equipe %s :", shared->tab[i1].name);
+    scanf("%d", &nbGoal1);
+    printf("veillez saisir le score de l'equipe %s :", shared->tab[i1].name);
+    scanf("%d", &nbGoal2);
+    V(mutMatch);
+    sleep(1);
     usleep(random()%MAXTIME);
     P(mutMatch);
     shared->tab[i1].status=1;
@@ -58,19 +96,25 @@ void simule(int id){
     else
         shared->tab[i1].status=0;
     printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
-    // printf("%d, %d\n", i1, i2);
     V(mutMatch);
 }
 
-void cleanup(int status, key_t key){
+void cleanup(int status, key_t key, int n){
+    for (int i = 0; i < log2(n); i++)
+    {
+        for (int j = 0; j < n; j++){
+                semfree(tabSem[i][j]);
+            }
+            n/=2;
+    }   
     semfree(mutMatch);
     shmfree(key);
-    exit(status); 
+    exit(status);
 }
 
 int main(int argc, char *argv[]){    
 
-    int nbMatch=NBMATCH;
+    int nbEquipes;
 
     int fd;
     ssize_t desc;
@@ -80,11 +124,18 @@ int main(int argc, char *argv[]){
     char** teams=NULL;
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
+    if(argc<2){printf("Veuillez saisi le nombre d'equipes\n");}
+    int p1=atoi(argv[1]);
+    //printf("%s",argv[1]);
+    if (ceil(log2(p1)) != floor(log2(p1))){
+        printf("Veuillez saisi un nombre d'equipes qui est une puissance de 2");
+        exit(1);
+    }else
+        nbEquipes=p1;
 
-    if (argc!=2) {printf("Veuillez fournir le nom du fichier en argument.\n"); return 1;}
-
+    if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
     /* ouverture du fichier */
-    fd = open(argv[1], O_RDONLY, 0777);
+    fd = open(argv[2], O_RDONLY, 0777);
     if (fd == -1) { perror("open"); return 2; }
 
     // allocate memory for the array of strings
@@ -98,7 +149,7 @@ int main(int argc, char *argv[]){
 
         int start = 0;
 
-         // Traitement de chaque ligne
+        // Traitement de chaque ligne
         for (int i = 0; i < desc; i++) {
             if (buffer[i] == '\n') {
                 memcpy(line_buffer + line_pos, buffer + start, i - start);
@@ -135,9 +186,9 @@ int main(int argc, char *argv[]){
     } while (desc>0);
 
     // print out the teams
-    for (int i = 0; i < NBMATCH*2; i++) {
-        printf("%s\n", teams[i]);
-    }
+    // for (int i = 0; i < p1*2; i++) {
+    //     printf("%s\n", teams[i]);
+    // }
 
     // Initialisation du générateur de nombres aléatoires
     srand(time(NULL));
@@ -152,6 +203,7 @@ int main(int argc, char *argv[]){
         teams[i] = teams[j];
         teams[j] = temp;
     }
+    // mode manuele
 
     key_t key = ftok("keyGen.xml", 1);
     if (key == -1) {
@@ -164,7 +216,7 @@ int main(int argc, char *argv[]){
     {
         perror("shmalloc failed");
         return 5;
-        cleanup(5, key+4);
+        cleanup(5, key+4, nbEquipes);
     }
     for (int i = 0; i < numTeams; i++) {
         strcpy(shared->tab[i].name, teams[i]);
@@ -177,44 +229,90 @@ int main(int argc, char *argv[]){
     {
         perror("semalloc failed");
         return 6;
-        cleanup(6, key+4);
+        cleanup(6, key+4, nbEquipes);
+    }
+
+    int n=nbEquipes;
+    tabSem = malloc(sizeof(int *) * log2(n));
+    for (int i = 0; i < log2(nbEquipes); i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            tabSem[j] = (int *)malloc(sizeof(int) * n);
+            if (i==0)
+            {
+                tabSem[i][j] = semalloc(key + 1, 1);
+                if (tabSem[i][j] == -1)
+                {
+                    perror("semalloc failed");
+                    return 6;
+                    cleanup(6, key + 4, n);
+                }
+            }else{
+                tabSem[i][j] = semalloc(key + 1, 0);
+                if (tabSem[i][j] == -1)
+                {
+                    perror("semalloc failed");
+                    return 6;
+                    cleanup(6, key + 4, n);
+                }
+            }
+        }
+        n/=2;
+    }
+
+    n=nbEquipes;
+    for (int i = 0; i < log2(nbEquipes); i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            printf("%d \t", tabSem[i][j]);
+        }
+        printf("\n");
+        n/=2;
     }
 
     puts ("***** STRIKE <CR> TO START, STOP THE PROGRAM *****");
     getchar();
 
-    while (nbMatch>0)
+    int tour=0;
+    n=nbEquipes;
+    while (n>0)
     {
         // création de n processus
-        int idMatch=nFork(nbMatch);
+        int idMatch=nFork(n);
         if(idMatch==-1){
             perror("Creation de processus");
-            cleanup(7, key+4);
+            cleanup(7, key+4, nbEquipes);
             return 7;
         }
         if(idMatch>0){
             /* fils */
-            simule(idMatch);
+            if (strcmp(argv[3],"-man")==0)
+                simule_man(idMatch);
+
+            simule(idMatch, tour);
             return 0;
         }
-        /* père */
-        for (int i = 0; i < nbMatch; i++)
-        {
-            while(waitpid(0,0,0) < 0);
-        }
-        printf("fin tour %d\n",nbMatch);
-        for (int i = 0; i < NBMATCH*2; i++)
-        {
-            printf("%s\t%d\n", shared->tab[i].name, shared->tab[i].status);
-        }
-        
-        nbMatch=nbMatch/2;
+        printf("fin tour %d\n",n);
+        // for (int i = 0; i < p1*2; i++)
+        // {
+        //     printf("%s\t%d\n", shared->tab[i].name, shared->tab[i].status);
+        // }
+        n=n/2;
+        tour++;
+    }
+
+    /* père */
+    for (int i = 0; i < (nbEquipes-1); i++)
+    {
+        while(waitpid(0,0,0) < 0);
     }
     
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
-    cleanup(0, key+4);
+    cleanup(0, key+4, nbEquipes);
     free(teams);
 
     return 0;
