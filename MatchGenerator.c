@@ -55,6 +55,7 @@ void simule(int id, int t){
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
+    V(tabSem[t][k]);
     //------------------------------------------------------------------------------
     P(mutMatch);
     shared->tab[i1].status=1;
@@ -63,8 +64,7 @@ void simule(int id, int t){
         shared->tab[i2].status=0;
     else
         shared->tab[i1].status=0;
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
-    V(tabSem[t][k]);
+    printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
     V(mutMatch);
 }
 
@@ -103,7 +103,7 @@ void simule_man(int id){
 }
 
 void cleanup(int status, key_t key, int n){
-    for (int i = 0; i < log2(n); i++)
+    for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++){
                 semfree(tabSem[i][j]);
@@ -219,7 +219,7 @@ int main(int argc, char *argv[]){
     {
         perror("shmalloc failed");
         return 5;
-        cleanup(5, key+4, nbEquipes);
+        cleanup(5, key+4, (int) log2(nbEquipes));
     }
     for (int i = 0; i < numTeams; i++) {
         strcpy(shared->tab[i].name, teams[i]);
@@ -232,12 +232,14 @@ int main(int argc, char *argv[]){
     {
         perror("semalloc failed");
         return 6;
-        cleanup(6, key+4, nbEquipes);
+        cleanup(6, key+4, (int) log2(nbEquipes));
     }
 
-    int n=nbEquipes;
-    tabSem = malloc(sizeof(int *) * log2(n));
-    for (int i = 0; i < log2(nbEquipes); i++)
+    int n=nbEquipes/2;
+    int nbtour = (int) log2(nbEquipes);
+    printf("%d\n", nbtour);
+    tabSem = malloc(sizeof(int *) * nbtour);
+    for (int i = 0; i <nbtour; i++)
     {
         for (int j = 0; j < n; j++)
         {
@@ -249,7 +251,7 @@ int main(int argc, char *argv[]){
                 {
                     perror("semalloc failed");
                     return 6;
-                    cleanup(6, key + 4, n);
+                    cleanup(6, key + 4, nbtour);
                 }
             }else{
                 tabSem[i][j] = semalloc(key + 1, 0);
@@ -257,15 +259,15 @@ int main(int argc, char *argv[]){
                 {
                     perror("semalloc failed");
                     return 6;
-                    cleanup(6, key + 4, n);
+                    cleanup(6, key + 4, nbtour);
                 }
             }
         }
         n/=2;
     }
 
-    n=nbEquipes;
-    for (int i = 0; i < log2(nbEquipes); i++)
+    n=nbEquipes/2;
+    for (int i = 0; i < nbtour; i++)
     {
         for (int j = 0; j < n; j++)
         {
@@ -279,14 +281,14 @@ int main(int argc, char *argv[]){
     getchar();
 
     int tour=1;
-    n=nbEquipes;
+    n=nbEquipes/2;
     while (n>0)
     {
         // création de n processus
         int idMatch=nFork(n);
         if(idMatch==-1){
             perror("Creation de processus");
-            cleanup(7, key+4, nbEquipes);
+            cleanup(7, key+4, nbtour);
             return 7;
         }
         if(idMatch>0){
@@ -315,7 +317,7 @@ int main(int argc, char *argv[]){
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
-    cleanup(0, key+4, nbEquipes);
+    cleanup(0, key+4, nbtour);
     free(teams);
 
     return 0;
