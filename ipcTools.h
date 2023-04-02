@@ -3,7 +3,7 @@
 
 #define MAXMSGSIZE 1500
 #define TEAMNAMESIZE 32
-#define MAXTIME 700000 // temps max pour simule()
+#define MAXTIME 5000000 // temps max pour simule()
 #define NAMEZIZE 30
 #define BUFFER_SIZE 1024
 #define TEAMS 48

@@ -1,25 +1,58 @@
-1114306         1114307         1114308         1114309         131738  131739  131746       66226 
-66227   66228   66229   66230 
-66235   66236 
-66243 
+524289  524290  524291  524292  131129  131130  131133  65600 
+65601   65602   65603   65604 
+65605   65606 
+65607 
 ***** STRIKE <CR> TO START, STOP THE PROGRAM *****
 
-1114306, 1114307
-1114308, 1114309
-fin tour 1
-131738, 131739
-131746, 66226
-fin tour 2
-66227, 66228
-fin tour 3
-66229, 66230
-66235, 66236
-Liverpool FC : 0 - 6 : FC Barcelone      (idMatch : 1    tour : 3)
-66243Liverpool FC : 2 - 0 : FC Barcelone         (idMatch : 1    tour : 1)
-66227Juventus FC : 3 - 5 : Real Madrid CF        (idMatch : 4    tour : 1)
-66230FC Bayern Munich : 3 - 4 : Manchester United FC     (idMatch : 2    tour : 2)
-66236Paris Saint-Germain FC : 1 - 1 : Borussia Dortmund          (idMatch : 2    tour : 1)
-66228Liverpool FC : 3 - 1 : FC Barcelone         (idMatch : 1    tour : 2)
-66235FC Bayern Munich : 4 - 3 : Manchester United FC     (idMatch : 3    tour : 1)
-66229
-saber07@MacBook-Air-de-saber07 projet-OS % 
+Valeur du semaphore P1 avant 524289 : 1
+Valeur du semaphore P2 avant 524290 : 1
+Valeur du semaphore P1 apres 524289 : 0
+Valeur du semaphore P2 apres 524290 : 0
+Valeur du semaphore P1 avant 524291 : 1
+Valeur du semaphore P2 avant 524292 : 1
+Valeur du semaphore P1 apres 524291 : 0
+Valeur du semaphore P2 apres 524292 : 0
+Valeur du semaphore P1 avant 131129 : 1
+Valeur du semaphore P2 avant 131130 : 1
+Valeur du semaphore P1 apres 131129 : 0
+Valeur du semaphore P2 apres 131130 : 0
+fin du tour 1
+Valeur du semaphore P1 avant 131133 : 1
+Valeur du semaphore P2 avant 65600 : 1
+Valeur du semaphore P1 apres 131133 : 0
+Valeur du semaphore P2 apres 65600 : 0
+Valeur du semaphore P1 avant 65601 : 0
+Valeur du semaphore P2 avant 65602 : 0
+fin du tour 2
+fin du tour 3
+Valeur du semaphore P1 avant 65603 : 0
+Valeur du semaphore P2 avant 65604 : 0
+Valeur du semaphore P1 avant 65605 : 0
+Valeur du semaphore P2 avant 65606 : 0
+Juventus FC : 0 - 1 : FC Barcelone       (idMatch : 1    tour : 1)
+Valeur du semaphore V avant 65601 : 0
+Valeur du semaphore V apres 65601 : 1
+Liverpool FC : 0 - 5 : Paris Saint-Germain FC    (idMatch : 2    tour : 1)
+Valeur du semaphore V avant 65602 : 0
+Valeur du semaphore V apres 65602 : 1
+Valeur du semaphore P1 apres 65601 : 0
+Valeur du semaphore P2 apres 65602 : 0
+Borussia Dortmund : 0 - 5 : FC Bayern Munich     (idMatch : 3    tour : 1)
+Valeur du semaphore V avant 65603 : 0
+Valeur du semaphore V apres 65603 : 1
+Real Madrid CF : 1 - 0 : Manchester United FC    (idMatch : 4    tour : 1)
+Valeur du semaphore V avant 65604 : 0
+Valeur du semaphore V apres 65604 : 1
+Valeur du semaphore P1 apres 65603 : 0
+Valeur du semaphore P2 apres 65604 : 0
+FC Barcelone : 2 - 6 : Paris Saint-Germain FC    (idMatch : 1    tour : 2)
+Valeur du semaphore V avant 65605 : 0
+Valeur du semaphore V apres 65605 : 1
+FC Bayern Munich : 4 - 3 : Real Madrid CF        (idMatch : 2    tour : 2)
+Valeur du semaphore V avant 65606 : 0
+Valeur du semaphore V apres 65606 : 1
+Valeur du semaphore P1 apres 65605 : 0
+Valeur du semaphore P2 apres 65606 : 0
+Paris Saint-Germain FC : 3 - 0 : FC Bayern Munich        (idMatch : 1    tour : 3)
+Valeur du semaphore V avant 65607 : 0
+Valeur du semaphore V apres 65607 : 1

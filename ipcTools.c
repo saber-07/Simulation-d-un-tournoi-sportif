@@ -49,13 +49,13 @@ int semalloc(key_t key, int valInit){
 
 static struct sembuf sbP={0, -1, 0};
 void P(int semid){
-    int result = semop(semid, &sbP, 0);
+    int result = semop(semid, &sbP, 1);
     if (result==-1) perror("P");
 }
 
 static struct sembuf sbV={0, 1, 0};
 void V(int semid){
-    int result = semop(semid, &sbV, 0);
+    int result = semop(semid, &sbV, 1);
     if (result==-1) perror("V");
 }
 
