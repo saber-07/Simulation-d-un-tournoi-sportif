@@ -59,12 +59,14 @@ void simule(int id, int t){
     while (shared->tab[i2].status!=1)
         i2++;
 
+    V(mutMatch);
     //------------------------------------------------------------------------------
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
     //------------------------------------------------------------------------------
 
+    P(mutMatch);
     if (nbGoal2<nbGoal1)
         shared->tab[i2].status=0;
     else
@@ -75,43 +77,43 @@ void simule(int id, int t){
 
     // printf("Valeur du semaphore V avant %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL));
     V(tabSem[t][k]);
-    // printf("Valeur du semaphore V apres %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL));
-
-    // return NULL;   
+    // printf("Valeur du semaphore V apres %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL)); 
 }
 
-void simule_man(int id){
-    int nbGoal1, nbGoal2;
-
+void simule_man(int id, int t){
     srandom(getpid());
-    // simule une execution
+    int k = id-1;
+
+    P(tabSem[t-1][2*k]);
+    P(tabSem[t-1][(2*k)+1]);
     P(mutMatch);
-    int i1=0;
-    while (shared->tab[i1].status!=1){
+
+    int i1=((int)pow(2, t))*k;
+    while (shared->tab[i1].status!=1)
         i1++;
-    }
+    
     int i2=i1+1;
-    while (shared->tab[i2].status!=1){
+    while (shared->tab[i2].status!=1)
         i2++;
-    }
-    shared->tab[i1].status=-1;
-    shared->tab[i2].status=-1;
-    printf("veillez saisir le score de l'equipe %s :", shared->tab[i1].name);
-    scanf("%d", &nbGoal1);
-    printf("veillez saisir le score de l'equipe %s :", shared->tab[i1].name);
-    scanf("%d", &nbGoal2);
-    V(mutMatch);
-    sleep(1);
+        
+
+    //------------------------------------------------------------------------------
+
+    int nbGoal1, nbGoal2;
+    printf("%s VS %s \n Entrez le score (séparé par un espace) : \n", shared->tab[i1].name, shared->tab[i2].name);
+    scanf("%d %d", &nbGoal1, &nbGoal2);
     usleep(random()%MAXTIME);
-    P(mutMatch);
-    shared->tab[i1].status=1;
-    shared->tab[i2].status=1;
+
+    //------------------------------------------------------------------------------
+
     if (nbGoal2<nbGoal1)
         shared->tab[i2].status=0;
     else
         shared->tab[i1].status=0;
-    printf("%s : %d - %d : %s \t (idMatch %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id);
+        
+    printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
     V(mutMatch);
+    V(tabSem[t][k]);
 }
 
 void cleanup(int status, key_t key, int n){
@@ -126,12 +128,11 @@ void cleanup(int status, key_t key, int n){
     }   
     semfree(mutMatch);
     shmfree(key);
+    msgfree(key+1);
     exit(status);
 }
 
 int main(int argc, char *argv[]){    
-
-    int nbEquipes;
 
     int fd;
     ssize_t desc;
@@ -142,13 +143,12 @@ int main(int argc, char *argv[]){
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
     if(argc<2){printf("Veuillez saisi le nombre d'equipes\n");}
-    int p1=atoi(argv[1]);
+    int nbEquipes=atoi(argv[1]);
     //printf("%s",argv[1]);
-    if (ceil(log2(p1)) != floor(log2(p1))){
+    if (ceil(log2(nbEquipes)) != floor(log2(nbEquipes))){
         printf("Veuillez saisi un nombre d'equipes qui est une puissance de 2");
         exit(1);
-    }else
-        nbEquipes=p1;
+    }
 
     if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
     /* ouverture du fichier */
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]){
     }
     // mode manuele
 
-    key_t key = ftok("keyGen.xml", getpid());
+    key_t key = ftok(".", getpid());
     if (key == -1) {
         perror("Erreur lors de la génération de la clé");
         return 1;
@@ -241,12 +241,20 @@ int main(int argc, char *argv[]){
         free(teams[i]);
     }
 
-    mutMatch = semalloc(key+1, 1);
+    int id_msg = msgalloc(key+1);
+    if (id_msg == -1)
+    {
+        perror("Alloc msg");
+        cleanup(2, key, (int) log2(nbEquipes));
+        return 2;
+    }
+
+    mutMatch = semalloc(key+2, 1);
     if (mutMatch==-1)
     {
         perror("semalloc failed");
+        cleanup(6, key, (int) log2(nbEquipes));
         return 6;
-        cleanup(6, key+1, (int) log2(nbEquipes));
     }
 
     int n=nbEquipes;
@@ -260,19 +268,19 @@ int main(int argc, char *argv[]){
         {
             if (i==0)
             {
-                tabSem[i][j] = semalloc(((key+2)*(i+1))+j, 1);
+                tabSem[i][j] = semalloc(((key+3)*(i+1))+j, 1);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    semfree(((key+2)*(i+1))+j);
+                    semfree(((key+3)*(i+1))+j);
                     exit(5);
                 }
             }else{
-                tabSem[i][j] = semalloc(((key+2)*(i+1))+j, 0);
+                tabSem[i][j] = semalloc(((key+3)*(i+1))+j, 0);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    semfree(((key+2)*(i+1))+j);
+                    semfree(((key+3)*(i+1))+j);
                     exit(5);
                 }
             }
@@ -308,7 +316,7 @@ int main(int argc, char *argv[]){
         if(idMatch>0){
             /* fils */
             if (strcmp(argv[3],"-man")==0)
-                simule_man(idMatch);
+                simule_man(idMatch, tour);
 
             simule(idMatch, tour);
             exit(0);

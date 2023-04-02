@@ -1,58 +1,31 @@
-524289  524290  524291  524292  131129  131130  131133  65600 
-65601   65602   65603   65604 
-65605   65606 
-65607 
-***** STRIKE <CR> TO START, STOP THE PROGRAM *****
-
-Valeur du semaphore P1 avant 524289 : 1
-Valeur du semaphore P2 avant 524290 : 1
-Valeur du semaphore P1 apres 524289 : 0
-Valeur du semaphore P2 apres 524290 : 0
-Valeur du semaphore P1 avant 524291 : 1
-Valeur du semaphore P2 avant 524292 : 1
-Valeur du semaphore P1 apres 524291 : 0
-Valeur du semaphore P2 apres 524292 : 0
-Valeur du semaphore P1 avant 131129 : 1
-Valeur du semaphore P2 avant 131130 : 1
-Valeur du semaphore P1 apres 131129 : 0
-Valeur du semaphore P2 apres 131130 : 0
-fin du tour 1
-Valeur du semaphore P1 avant 131133 : 1
-Valeur du semaphore P2 avant 65600 : 1
-Valeur du semaphore P1 apres 131133 : 0
-Valeur du semaphore P2 apres 65600 : 0
-Valeur du semaphore P1 avant 65601 : 0
-Valeur du semaphore P2 avant 65602 : 0
-fin du tour 2
-fin du tour 3
-Valeur du semaphore P1 avant 65603 : 0
-Valeur du semaphore P2 avant 65604 : 0
-Valeur du semaphore P1 avant 65605 : 0
-Valeur du semaphore P2 avant 65606 : 0
-Juventus FC : 0 - 1 : FC Barcelone       (idMatch : 1    tour : 1)
-Valeur du semaphore V avant 65601 : 0
-Valeur du semaphore V apres 65601 : 1
-Liverpool FC : 0 - 5 : Paris Saint-Germain FC    (idMatch : 2    tour : 1)
-Valeur du semaphore V avant 65602 : 0
-Valeur du semaphore V apres 65602 : 1
-Valeur du semaphore P1 apres 65601 : 0
-Valeur du semaphore P2 apres 65602 : 0
-Borussia Dortmund : 0 - 5 : FC Bayern Munich     (idMatch : 3    tour : 1)
-Valeur du semaphore V avant 65603 : 0
-Valeur du semaphore V apres 65603 : 1
-Real Madrid CF : 1 - 0 : Manchester United FC    (idMatch : 4    tour : 1)
-Valeur du semaphore V avant 65604 : 0
-Valeur du semaphore V apres 65604 : 1
-Valeur du semaphore P1 apres 65603 : 0
-Valeur du semaphore P2 apres 65604 : 0
-FC Barcelone : 2 - 6 : Paris Saint-Germain FC    (idMatch : 1    tour : 2)
-Valeur du semaphore V avant 65605 : 0
-Valeur du semaphore V apres 65605 : 1
-FC Bayern Munich : 4 - 3 : Real Madrid CF        (idMatch : 2    tour : 2)
-Valeur du semaphore V avant 65606 : 0
-Valeur du semaphore V apres 65606 : 1
-Valeur du semaphore P1 apres 65605 : 0
-Valeur du semaphore P2 apres 65606 : 0
-Paris Saint-Germain FC : 3 - 0 : FC Bayern Munich        (idMatch : 1    tour : 3)
-Valeur du semaphore V avant 65607 : 0
-Valeur du semaphore V apres 65607 : 1
+FC Sheriff Tiraspol : 3 - 3 :     Bayern Munich      (idMatch : 1    tour : 1)
+    Sheriff Tiraspol : 2 - 4 :     Besiktas      (idMatch : 5    tour : 1)
+    FC Salzburg : 3 - 4 :     Club Brugge        (idMatch : 4    tour : 1)
+    Chelsea : 3 - 6 :     Malmo FF       (idMatch : 9    tour : 1)
+    AC Milan : 1 - 1 :     Barcelona     (idMatch : 11   tour : 1)
+    Manchester City : 1 - 6 :     Zenit Saint Petersburg         (idMatch : 12   tour : 1)
+    Juventus : 3 - 3 :     Ajax          (idMatch : 14   tour : 1)
+    Atalanta : 4 - 0 :     Atletico Madrid       (idMatch : 15   tour : 1)
+    Inter Milan : 0 - 4 :     Paris Saint-Germain        (idMatch : 2    tour : 1)
+    Sporting CP : 2 - 0 :     Liverpool          (idMatch : 3    tour : 1)
+    RB Leipzig : 3 - 0 :     Dynamo Kyiv         (idMatch : 16   tour : 1)
+    Real Madrid : 2 - 3 :     FC Midtjylland     (idMatch : 8    tour : 1)
+    Shakhtar Donetsk : 4 - 5 :     Lille         (idMatch : 7    tour : 1)
+    Porto : 4 - 6 :     Borussia Dortmund        (idMatch : 6    tour : 1)
+    FC Zenit : 2 - 1 :     Benfica       (idMatch : 13   tour : 1)
+    Barcelona : 1 - 4 :     Zenit Saint Petersburg       (idMatch : 6    tour : 2)
+    Bayern Munich : 2 - 0 :     Paris Saint-Germain      (idMatch : 1    tour : 2)
+    Atalanta : 3 - 3 :     RB Leipzig    (idMatch : 8    tour : 2)
+    Sporting CP : 3 - 4 :     Club Brugge        (idMatch : 2    tour : 2)
+    Young Boys : 3 - 0 :     Sevilla     (idMatch : 10   tour : 1)
+    Lille : 1 - 0 :     FC Midtjylland   (idMatch : 4    tour : 2)
+    Besiktas : 4 - 5 :     Borussia Dortmund     (idMatch : 3    tour : 2)
+    FC Zenit : 2 - 4 :     Ajax          (idMatch : 7    tour : 2)
+    Malmo FF : 4 - 0 :     Young Boys    (idMatch : 5    tour : 2)
+    Bayern Munich : 0 - 2 :     Club Brugge      (idMatch : 1    tour : 3)
+    Ajax : 4 - 1 :     RB Leipzig        (idMatch : 4    tour : 3)
+    Borussia Dortmund : 4 - 0 :     Lille        (idMatch : 2    tour : 3)
+    Malmo FF : 4 - 5 :     Zenit Saint Petersburg        (idMatch : 3    tour : 3)
+    Club Brugge : 2 - 6 :     Borussia Dortmund          (idMatch : 1    tour : 4)
+    Zenit Saint Petersburg : 4 - 2 :     Ajax    (idMatch : 2    tour : 4)
+    Borussia Dortmund : 2 - 5 :     Zenit Saint Petersburg       (idMatch : 1    tour : 5)
