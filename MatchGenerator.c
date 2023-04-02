@@ -26,8 +26,10 @@ typedef struct
 }Shared;
 Shared *shared;
 
+int id_msg;
+
 // sémaphores
-int tabSem[4][8];
+int **tabSem;
 int mutMatch;
 
 void simule(int id, int t){
@@ -35,14 +37,18 @@ void simule(int id, int t){
     srandom(getpid());
     int k = id-1;
 
+    // printf("Valeur du semaphore P1 avant %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
+    // printf("Valeur du semaphore P2 avant %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
+
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
     // printf("%d, %d\n", tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
 
-    // printf("Valeur du semaphore %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
-    // printf("Valeur du semaphore %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
-
+    // printf("Valeur du semaphore P1 apres %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
+    // printf("Valeur du semaphore P2 apres %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
+    // printf("Valeur du semaphore %d : %d\n", mutMatch, semctl(mutMatch, 0, GETVAL));
     P(mutMatch);
+    // printf("Valeur du semaphore %d : %d\n", mutMatch, semctl(mutMatch, 0, GETVAL));
 
     int i1=((int)pow(2, t))*k;
     // printf("%d\n", i1);
@@ -53,25 +59,25 @@ void simule(int id, int t){
     while (shared->tab[i2].status!=1)
         i2++;
 
-    V(mutMatch);
     //------------------------------------------------------------------------------
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
     //------------------------------------------------------------------------------
-    P(mutMatch);
 
     if (nbGoal2<nbGoal1)
         shared->tab[i2].status=0;
     else
         shared->tab[i1].status=0;
+        
     printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
     V(mutMatch);
 
+    // printf("Valeur du semaphore V avant %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL));
     V(tabSem[t][k]);
-    // printf("%d", tabSem[t][k]);
-    while(wait(NULL) < 0);
-    
+    // printf("Valeur du semaphore V apres %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL));
+
+    // return NULL;   
 }
 
 void simule_man(int id){
@@ -243,42 +249,13 @@ int main(int argc, char *argv[]){
         cleanup(6, key+1, (int) log2(nbEquipes));
     }
 
-    // int n=nbEquipes/2;
-    // int nbtour = (int) log2(nbEquipes);
-    // printf("%d\n", nbtour);
-    // tabSem = malloc(sizeof(int *) * nbtour);
-    // for (int i = 0; i <nbtour; i++)
-    // {
-    //     for (int j = 0; j < n; j++)
-    //     {
-    //         tabSem[j] = (int *)malloc(sizeof(int) * n);
-    //         if (i==0)
-    //         {
-    //             tabSem[i][j] = semalloc(key*i+j, 1);
-    //             if (tabSem[i][j] == -1)
-    //             {
-    //                 perror("semalloc failed");
-    //                 return 6;
-    //                 cleanup(6, key*i+j, nbtour);
-    //             }
-    //         }else{
-    //             tabSem[i][j] = semalloc(key*i+j, 0);
-    //             if (tabSem[i][j] == -1)
-    //             {
-    //                 perror("semalloc failed");
-    //                 return 6;
-    //                 cleanup(6, key*i+j, nbtour);
-    //             }
-    //         }
-    //     }
-    //     n/=2;
-    // }
-
     int n=nbEquipes;
     int nbtour = (int) (log2(nbEquipes) + 1);
+    tabSem = malloc(sizeof(int *) * nbtour);
 
     for (int i = 0; i <nbtour; i++)
     {
+        tabSem[i] = (int *)malloc(sizeof(int) * n);
         for (int j = 0; j < n; j++)
         {
             if (i==0)
@@ -300,6 +277,7 @@ int main(int argc, char *argv[]){
                 }
             }
         }
+        n/=2;
     }
 
     n=nbEquipes;
@@ -335,11 +313,6 @@ int main(int argc, char *argv[]){
             simule(idMatch, tour);
             exit(0);
         }
-        printf("fin tour %d\n",tour);
-        // for (int i = 0; i < p1*2; i++)
-        // {
-        //     printf("%s\t%d\n", shared->tab[i].name, shared->tab[i].status);
-        // }
         n=n/2;
         tour++;
     }
@@ -353,7 +326,7 @@ int main(int argc, char *argv[]){
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
-    cleanup(0, key+4, nbtour);
+    cleanup(0, key, nbtour);
     free(teams);
 
     return 0;
