@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/uio.h>
 #include <math.h>
+#include <sys/sem.h>
 #include "ipcTools.h"
 
 // Var partagé
@@ -32,42 +33,45 @@ int mutMatch;
 void simule(int id, int t){
 
     srandom(getpid());
-    // simule une execution
-    P(mutMatch);
-    int i1=0;
-    while (shared->tab[i1].status!=1){
-        i1++;
-    }
-    int i2=i1+1;
-    while (shared->tab[i2].status!=1){
-        i2++;
-    }
-    shared->tab[i1].status=-1;
-    shared->tab[i2].status=-1;
-    V(mutMatch);
-    //------------------------------------------------------------------------------
     int k = id-1;
-    printf("%d, %d, %d\n",t-1, 2*k, (2*k)+1);
-    printf("%d, %d\n",tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
+
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
-    sleep(1);
+    // printf("%d, %d\n", tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
+
+    // printf("Valeur du semaphore %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
+    // printf("Valeur du semaphore %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
+
+    P(mutMatch);
+
+    int i1=((int)pow(2, t))*k;
+    // printf("%d\n", i1);
+    while (shared->tab[i1].status!=1)
+        i1++;
+    
+    int i2=i1+1;
+    while (shared->tab[i2].status!=1)
+        i2++;
+
+    V(mutMatch);
+    //------------------------------------------------------------------------------
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
-    V(tabSem[t][k]);
-    printf("%d, %d\n", t, k);
-    printf("%d\n", tabSem[t][k]);
     //------------------------------------------------------------------------------
     P(mutMatch);
-    shared->tab[i1].status=1;
-    shared->tab[i2].status=1;
+
     if (nbGoal2<nbGoal1)
         shared->tab[i2].status=0;
     else
         shared->tab[i1].status=0;
     printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
     V(mutMatch);
+
+    V(tabSem[t][k]);
+    // printf("%d", tabSem[t][k]);
+    while(wait(NULL) < 0);
+    
 }
 
 void simule_man(int id){
