@@ -68,7 +68,7 @@ void * shmalloc (key_t key, int size){
     void *res;
     int shmid = shmget(key, 1, 0);
 
-    if (shmid==-1) shmid = shmget(key, size, IPC_CREAT|IPC_EXCL|06000);
+    if (shmid==-1) shmid = shmget(key, size, IPC_CREAT|IPC_EXCL|0666);
     if (shmid==-1) return 0;
     res = shmat(shmid, NULL, 0);
     if(res == (void *) -1){ 
