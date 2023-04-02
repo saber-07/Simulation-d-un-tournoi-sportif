@@ -1,0 +1,29 @@
+65672   65673   65674   65675   65676   65677   65678   65679 
+65680   65681   65682   65683 
+65688   65689 
+65696 
+***** STRIKE <CR> TO START, STOP THE PROGRAM *****
+
+0, 0, 1
+65672, 65673
+0, 2, 3
+65674, 65675
+0, 4, 5
+65676, 65677
+fin tour 1
+0, 6, 7
+65678, 65679
+fin tour 2
+fin tour 3
+1, 3
+65683
+Manchester United FC : 1 - 6 : Real Madrid CF    (idMatch : 4    tour : 1)
+1, 0
+65680
+Liverpool FC : 1 - 5 : Juventus FC       (idMatch : 1    tour : 1)
+1, 2
+65682
+Paris Saint-Germain FC : 1 - 2 : FC Bayern Munich        (idMatch : 3    tour : 1)
+1, 1
+65681
+FC Barcelone : 4 - 1 : Borussia Dortmund         (idMatch : 2    tour : 1)

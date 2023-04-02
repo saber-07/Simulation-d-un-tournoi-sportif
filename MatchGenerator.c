@@ -26,7 +26,7 @@ typedef struct
 Shared *shared;
 
 // sémaphores
-int tabSem[4][4];
+int tabSem[4][8];
 int mutMatch;
 
 void simule(int id, int t){
@@ -47,14 +47,16 @@ void simule(int id, int t){
     V(mutMatch);
     //------------------------------------------------------------------------------
     int k = id-1;
+    printf("%d, %d, %d\n",t-1, 2*k, (2*k)+1);
+    printf("%d, %d\n",tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
-    printf("%d, %d\n",tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
     sleep(1);
     int nbGoal1=random()%5;
     int nbGoal2=random()%7;
     usleep(random()%MAXTIME);
     V(tabSem[t][k]);
+    printf("%d, %d\n", t, k);
     printf("%d\n", tabSem[t][k]);
     //------------------------------------------------------------------------------
     P(mutMatch);
@@ -103,12 +105,14 @@ void simule_man(int id){
 }
 
 void cleanup(int status, key_t key, int n){
-    for (int i = 0; i < n; i++)
+    int m=n;
+    int nbtour = (int) (log2(n) + 1);
+    for (int i = 0; i < nbtour; i++)
     {
-        for (int j = 0; j < n; j++){
+        for (int j = 0; j < m; j++){
                 semfree(tabSem[i][j]);
             }
-            n/=2;
+            m/=2;
     }   
     semfree(mutMatch);
     shmfree(key);
@@ -208,7 +212,7 @@ int main(int argc, char *argv[]){
     }
     // mode manuele
 
-    key_t key = ftok("keyGen.xml", 1);
+    key_t key = ftok("keyGen.xml", getpid());
     if (key == -1) {
         perror("Erreur lors de la génération de la clé");
         return 1;
@@ -219,7 +223,7 @@ int main(int argc, char *argv[]){
     {
         perror("shmalloc failed");
         return 5;
-        cleanup(5, key+4, (int) log2(nbEquipes));
+        cleanup(5, key, (int) log2(nbEquipes));
     }
     for (int i = 0; i < numTeams; i++) {
         strcpy(shared->tab[i].name, teams[i]);
@@ -232,7 +236,7 @@ int main(int argc, char *argv[]){
     {
         perror("semalloc failed");
         return 6;
-        cleanup(6, key+4, (int) log2(nbEquipes));
+        cleanup(6, key+1, (int) log2(nbEquipes));
     }
 
     // int n=nbEquipes/2;
@@ -266,8 +270,8 @@ int main(int argc, char *argv[]){
     //     n/=2;
     // }
 
-    int n=nbEquipes/2;
-    int nbtour = (int) log2(nbEquipes);
+    int n=nbEquipes;
+    int nbtour = (int) (log2(nbEquipes) + 1);
 
     for (int i = 0; i <nbtour; i++)
     {
@@ -275,26 +279,26 @@ int main(int argc, char *argv[]){
         {
             if (i==0)
             {
-                tabSem[i][j] = semalloc(key*i+j, 1);
+                tabSem[i][j] = semalloc(((key+2)*(i+1))+j, 1);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    semfree(key*i+j);
+                    semfree(((key+2)*(i+1))+j);
                     exit(5);
                 }
             }else{
-                tabSem[i][j] = semalloc(key*i+j, 0);
+                tabSem[i][j] = semalloc(((key+2)*(i+1))+j, 0);
                 if (tabSem[i][j] == -1)
                 {
                     perror("semalloc failed");
-                    semfree(key*i+j);
+                    semfree(((key+2)*(i+1))+j);
                     exit(5);
                 }
             }
         }
     }
 
-    n=nbEquipes/2;
+    n=nbEquipes;
     for (int i = 0; i < nbtour; i++)
     {
         for (int j = 0; j < n; j++)
@@ -325,7 +329,7 @@ int main(int argc, char *argv[]){
                 simule_man(idMatch);
 
             simule(idMatch, tour);
-            return 0;
+            exit(0);
         }
         printf("fin tour %d\n",tour);
         // for (int i = 0; i < p1*2; i++)
