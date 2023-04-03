@@ -83,13 +83,13 @@ void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
     int po1 = 30 + random() % 40;
     int po2 = 100 - po1;
   //Carton Jaune
-   printf("\033[33mNombre de carton jaune :\t %d\tvs\t%d  \033[0m\n",cj1, cj2);
+   printf("\033[33mNombre de carton jaune : \t %d\tvs\t%d  \033[0m\n",cj1, cj2);
   // Carton Rouge
-   printf("\033[33mNombre de carton rouge :\t %d\tvs\t%d  \033[0m\n",cr1, cr2);
+   printf("\033[33mNombre de carton rouge : \t %d\tvs\t%d  \033[0m\n",cr1, cr2);
   // Nombre de tentatives
-   printf("\033[33mNombre de tirs cadrés :\t %d\tvs\t%d  \033[0m\n", nb_t1, nb_t2);
+   printf("\033[33mNombre de tirs cadrés : \t %d\tvs\t%d  \033[0m\n", nb_t1, nb_t2);
   // Possession de balle
-   printf("\033[33mPossession de balles :\t %d\tvs\t%d   \033[0m\n", po1, po2);
+   printf("\033[33mPossession de balles :   \t %d\tvs\t%d   \033[0m\n", po1, po2);
   usleep(duree_action);
   /* stop chrono */
   gettimeofday(&duree_stop,0);
@@ -97,7 +97,7 @@ void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
     printf("\n\033[33m********************************\n\033[0m\n");
 }
 
-void simule(int id, int t, int fd, int dur){
+void simule(int id, int t, int fd, int dur, int f_csv){
 
     srandom(getpid());
     int k = id-1;
@@ -140,7 +140,7 @@ void simule(int id, int t, int fd, int dur){
         shared->tab[i1].status=0;
       }
     }
-    printf("> %s %d - %d %s \n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name); 
+    printf("> %s %d - %d %s \t (tour N°%d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, t); 
     if (penalty == 1) {
       if (gagnant_penalty == 1) {
         printf("  %s a gagné par tirs au buts \n",shared->tab[i1].name);
@@ -152,6 +152,11 @@ void simule(int id, int t, int fd, int dur){
     printf("\n");
     display_details(nbGoal1,nbGoal2,i1,i2, dur);
     saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, id, t);
+
+    char data[200];
+    sprintf(data, "%s, %d, %d, %s, %d\n", shared->tab[i1].name, nbGoal1, nbGoal2,
+            shared->tab[i2].name, t);
+    write(f_csv, data, strlen(data));
 
     V(mutMatch);
     V(tabSem[t][k]);
@@ -200,7 +205,6 @@ void cleanup(int status, key_t key, int n){
     for (int i = 0; i < nbtour; i++)
     {
         for (int j = 0; j < m; j++){
-                puts("je fais ça");
                 semfree(tabSem[i][j]);
             }
             m/=2;
@@ -262,8 +266,10 @@ int main(int argc, char *argv[]){
         };
 
         teams = (char**)malloc(nbEquipes * sizeof(char*));
-        for (int i = 0; i < nbEquipes; i++) 
+        for (int i = 0; i < nbEquipes; i++){
+            teams[i] = (char*)malloc((strlen(team_names[i]) + 1) * sizeof(char));
             strcpy(teams[i], team_names[i]);
+        }
 
     }else{
         /* ouverture du fichier */
@@ -281,7 +287,7 @@ int main(int argc, char *argv[]){
             return 3;
         }
 
-        printTeams(teams, numTeams);
+        // printTeams(teams, numTeams);
         
         // Fermeture du fichier
         if (close(fd1)==-1) {perror("close"); return 4;}
@@ -352,17 +358,22 @@ int main(int argc, char *argv[]){
         n/=2;
     }
 
-    /* ouverture du fichier de sortie */
-    if (access(OUTPUTFILE, F_OK) != -1) {
-        fprintf(stderr, "Le fichier existe déjà\n");
-        exit(1);
-    }
-    fd2 = open(OUTPUTFILE, O_WRONLY | O_CREAT | O_EXCL | O_EXCL, 00644);
+    fd2 = open(OUTPUTFILE, O_WRONLY | O_CREAT | O_TRUNC, 00644);
     /* ouverture impossible */
     if (fd2==-1) {              
         perror("open");
         exit(8);
     } 
+
+    int f_csv;
+    f_csv = open("result.csv", O_WRONLY | O_CREAT | O_TRUNC,
+                0644); // open file for writing
+    if (f_csv == -1) {
+        printf("Error opening file.\n");
+        return 1;
+    }
+    char headers[] = "Equipe 1, score 1, score 2, Equipe 2, Tour\n";
+    write(f_csv, headers, strlen(headers));
 
     puts ("***** STRIKE <CR> TO START, STOP THE PROGRAM *****");
     getchar();
@@ -381,9 +392,9 @@ int main(int argc, char *argv[]){
         if(idMatch>0){
             /* fils */
             if (strcmp(argv[3],"-man")==0)
-                simule_man(idMatch, tour);
+                simule_man(idMatch, tour);  
 
-            simule(idMatch, tour, fd2, dur);
+            simule(idMatch, tour, fd2, dur, f_csv);
             exit(0);
         }
         n=n/2;
@@ -396,11 +407,13 @@ int main(int argc, char *argv[]){
         while(waitpid(0,0,0) < 0);
     }
     
+    printf("\033[31m FIN DU TOURNOI \033[0m\n");
+
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
     close(fd2);
-    remove(OUTPUTFILE);
+    close(f_csv); // close file
     cleanup(0, key, nbtour);
     free(teams);
 

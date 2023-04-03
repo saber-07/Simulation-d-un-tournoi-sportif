@@ -13,6 +13,7 @@
 
 #include "ipcTools.h"
 
+// Fonction permettant de créer un certain nombre de processus fils
 int nFork (int nbProcs){
     for (int i = 1; i <= nbProcs; i++)
     {
@@ -31,12 +32,11 @@ int nFork (int nbProcs){
     return 0;
 }
 
-//**********************************************************************************
-//**********************************************************************************
-
+// Fonction permettant de créer un sémaphore
 int semalloc(key_t key, int valInit){
-
+    // On essaie de récupérer l'identifiant du sémaphore
     int semid = semget (key, 1, 0);
+    // Si le sémaphore n'existe pas, on le crée et on l'initialise à la valeur souhaitée
     if (semid==-1)
     {
         semid = semget (key, 1, IPC_CREAT|IPC_EXCL|0666);
@@ -49,45 +49,42 @@ int semalloc(key_t key, int valInit){
             else return semid;
         }
     }
+    // Si le sémaphore existe déjà, on retourne son identifiant
     else{
         printf("ce semaphore existe\n");
         return semid;
     }
 }
 
-//------------------------------------------------------------------------------
-
+// Opération P sur le sémaphore
 static struct sembuf sbP={0, -1, 0};
 void P(int semid){
-    int result = semop(semid, &sbP, 1);
-    if (result==-1) perror("P");
+    int result = semop(semid, &sbP, 0);
+    if (result==-1) perror("erreur");
 }
 
-//------------------------------------------------------------------------------
-
+// Opération V sur le sémaphore
 static struct sembuf sbV={0, 1, 0};
 void V(int semid){
-    int result = semop(semid, &sbV, 1);
-    if (result==-1) perror("V");
+    int result = semop(semid, &sbV, 0);
+    if (result==-1) perror("erreur");
 }
 
-//------------------------------------------------------------------------------
-
+// Fonction permettant de libérer un sémaphore
 int semfree(int semid){
     return semctl(semid,0,IPC_RMID,0);
 }
 
-//**********************************************************************************
-//**********************************************************************************
-
+// Fonction permettant de créer une zone de mémoire partagée
 void * shmalloc (key_t key, int size){
-
     void *res;
     int shmid = shmget(key, 1, 0);
-
-    if (shmid==-1) shmid = shmget(key, size, IPC_CREAT|IPC_EXCL|0666);
+    // Si la zone de mémoire partagée n'existe pas, on la crée
+    if (shmid==-1) shmid = shmget(key, size, IPC_CREAT|IPC_EXCL|06000);
     if (shmid==-1) return 0;
+    // On attache la zone de mémoire partagée au processus courant
     res = shmat(shmid, NULL, 0);
+    // Si l'attachement a échoué, on supprime la zone de mémoire partagée
     if(res == (void *) -1){ 
         shmctl(shmid, IPC_RMID, NULL);
         return 0;
@@ -95,65 +92,14 @@ void * shmalloc (key_t key, int size){
     return res;
 }
 
-//------------------------------------------------------------------------------
-
+// Fonction qui permet de libérer une région de mémoire partagée identifiée par sa clé
 int shmfree (key_t key){
-
+    // Récupération de l'identifiant de la mémoire partagée en utilisant la clé
     int shmid = shmget(key, 1, 0);
-
+    // Si shmidest égal à -1, la fonction retourne -1 pour indiquer l'erreur
     if (shmid == -1) return -1;
+    // Sinon, la fonction appelle la fonction shmctl() pour supprimer la région de mémoire partagée
     else return shmctl(shmid, IPC_RMID, NULL);
-}
-
-//**********************************************************************************
-//**********************************************************************************
-
-int msgalloc(key_t key){
-    int mqid = msgget(key, 0);
-    if(mqid == -1) mqid = msgget(key, IPC_CREAT|IPC_EXCL|0600);
-    if(mqid == -1) return -1;
-    else return mqid;
-}
-
-//------------------------------------------------------------------------------
-
-int msgfree (int msgqid){
-    return msgctl(msgqid, IPC_RMID, 0);
-}
-
-//------------------------------------------------------------------------------
-
-static struct 
-{
-    long type;
-    char msg[MAXMSGSIZE];
-}buffer;
-
-//------------------------------------------------------------------------------
-
-int msgsend(int msqid, char* msg, int msgSize){
-    if (msgSize>MAXMSGSIZE)
-    {
-        perror("Message too long");
-        return -1;
-    }
-    buffer.type=1;
-    strncpy(buffer.msg, msg, msgSize);
-    return msgsnd(msqid, &buffer, msgSize, 0);
-}
-
-//------------------------------------------------------------------------------
-
-int msgrecv(int msqid, char* msg, int msgSize){
-    if (msgSize>MAXMSGSIZE)
-    {
-        perror("Message too long");
-        return -1;
-    }
-    buffer.type=1;
-    int res = msgrcv(msqid, &buffer, msgSize, 1, 0);
-    if(res!=-1) strncpy(msg, buffer.msg, msgSize);
-    return res;
 }
 
 //**********************************************************************************

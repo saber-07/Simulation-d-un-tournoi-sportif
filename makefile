@@ -1,14 +1,14 @@
-# all : MatchGenerator doxygen
-OBJ = list.o ipcTools.o MatchGenerator.o
+# all : main doxygen
+OBJ = list.o ipcTools.o main.o
 
 
-MatchGenerator : $(OBJ)
-MatchGenerator.o : list.h ipcTools.h
+main : $(OBJ)
+main.o : list.h ipcTools.h
 
 # doxygen :
 # 	doxygen ./generate-doxygen
 
 
 # clean : 
-# 	rm -f $(OBJ) MatchGenerator
+# 	rm -f $(OBJ) main
 # 	rm -rf ./doxygen
