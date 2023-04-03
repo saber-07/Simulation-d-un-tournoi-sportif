@@ -124,6 +124,8 @@ void cleanup(int status, key_t key, int n){
     exit(status);
 }
 
+    //------------------------------------------------------------------------------
+
 int main(int argc, char *argv[]){   
 
     int fd2;                     /* le descripteur pour le fichier de sortie */
@@ -152,88 +154,33 @@ int main(int argc, char *argv[]){
     }
 
     if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
+
     /* ouverture du fichier */
-    fd1 = open(argv[2], O_RDONLY, 0777);
-    if (fd1 == -1) { perror("open"); return 3; }
+    fd1 = openFile(argv[2]);
+    if (fd1 == -1) {
+        perror("open");
+        return 2;
+    }
 
     // allocate memory for the array of strings
     teams = (char**)malloc(max_teams * sizeof(char*));
 
-    // Lecture du fichier ligne par ligne
-    do
-    {
-        desc = read(fd1, buffer, BUFFER_SIZE);
-        if(desc==-1){perror("read"); return 4;}
-
-        int start = 0;
-        // Traitement de chaque ligne
-        for (int i = 0; i < desc; i++) {
-            if (buffer[i] == '\n') {
-                memcpy(line_buffer + line_pos, buffer + start, i - start);
-                line_buffer[line_pos + i - start] = '\0';
-
-                // Add the line to the array
-                if (numTeams == max_teams) {
-                    // if the array is full, reallocate it to double its size
-                    max_teams *= 2;
-                    teams = (char**)realloc(teams, max_teams * sizeof(char*));
-                }
-                teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
-                numTeams++;
-                
-                /* avancée au début de la ligne suivante */
-                start = i + 1;
-                line_pos = 0;
-            }
-        }
-        /* Traiter la dernière ligne  */
-        if(start < desc) {
-            memcpy(line_buffer + line_pos, buffer + start, desc - start);
-            line_pos += desc - start;
-            line_buffer[line_pos] = '\0';
-            
-            char * strToken = strtok ( line_buffer, " ");          
-            bool isDigit = true;
-            size_t length = strlen(strToken);
-            for(int i=0; i<length; i++)
-                if (!isdigit(strToken[i]))
-                    isDigit = false;
-
-            if (isDigit){
-                dur = atoi(strToken);
-            }else{
-                // Add the line to the array
-                if (numTeams == max_teams) {
-                    // if the array is full, reallocate it to double its size
-                    max_teams *= 2;
-                    teams = (char**)realloc(teams, max_teams * sizeof(char*));
-                }
-                teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
-                numTeams++;
-            }
-        }
-    } while (desc>0);
-
-    // print out the teams
-    for (int i = 0; i < numTeams; i++) {
-        printf("%s\n", teams[i]);
+    if (readFile(fd1, teams, &numTeams, &max_teams, &dur) == -1) {
+        perror("read");
+        return 3;
     }
-    printf("%d\n", dur);
 
-    // Initialisation du générateur de nombres aléatoires
-    srand(time(NULL));
+    printTeams(teams, numTeams, dur);
     
     // Fermeture du fichier
     if (close(fd1)==-1) {perror("close"); return 4;}
 
+    // Initialisation du générateur de nombres aléatoires
+    srand(getpid());
+
     // Mélange des lignes dans le tableau
-    for (int i = numTeams-1; i > 0; i--) {
-        int j = rand() % (i+1);
-        char* temp = teams[i];
-        teams[i] = teams[j];
-        teams[j] = temp;
-    }
-    // mode manuele
+    shuffleTeams(teams, numTeams);
+
 
     key_t key = ftok(".", getpid());
     if (key == -1) {

@@ -21,4 +21,8 @@ int msgalloc(key_t key);
 int msgfree (int msgqid);
 int msgsend(int msqid, char* msg, int msgSize);
 int msgrecv(int msqid, char* msg, int msgSize);
+int openFile(char *filename);
+int readFile(int fd, char **teams, int *numTeams, int *max_teams, int *dur);
+void shuffleTeams(char **teams, int numTeams);
+void printTeams(char **teams, int numTeams, int dur);
 void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int id, int t);

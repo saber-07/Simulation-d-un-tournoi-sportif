@@ -8,6 +8,8 @@
 #include <sys/msg.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 #include "ipcTools.h"
 
@@ -28,6 +30,9 @@ int nFork (int nbProcs){
     }
     return 0;
 }
+
+//**********************************************************************************
+//**********************************************************************************
 
 int semalloc(key_t key, int valInit){
 
@@ -50,11 +55,15 @@ int semalloc(key_t key, int valInit){
     }
 }
 
+//------------------------------------------------------------------------------
+
 static struct sembuf sbP={0, -1, 0};
 void P(int semid){
     int result = semop(semid, &sbP, 1);
     if (result==-1) perror("P");
 }
+
+//------------------------------------------------------------------------------
 
 static struct sembuf sbV={0, 1, 0};
 void V(int semid){
@@ -62,9 +71,14 @@ void V(int semid){
     if (result==-1) perror("V");
 }
 
+//------------------------------------------------------------------------------
+
 int semfree(int semid){
     return semctl(semid,0,IPC_RMID,0);
 }
+
+//**********************************************************************************
+//**********************************************************************************
 
 void * shmalloc (key_t key, int size){
 
@@ -81,6 +95,8 @@ void * shmalloc (key_t key, int size){
     return res;
 }
 
+//------------------------------------------------------------------------------
+
 int shmfree (key_t key){
 
     int shmid = shmget(key, 1, 0);
@@ -89,6 +105,9 @@ int shmfree (key_t key){
     else return shmctl(shmid, IPC_RMID, NULL);
 }
 
+//**********************************************************************************
+//**********************************************************************************
+
 int msgalloc(key_t key){
     int mqid = msgget(key, 0);
     if(mqid == -1) mqid = msgget(key, IPC_CREAT|IPC_EXCL|0600);
@@ -96,9 +115,13 @@ int msgalloc(key_t key){
     else return mqid;
 }
 
+//------------------------------------------------------------------------------
+
 int msgfree (int msgqid){
     return msgctl(msgqid, IPC_RMID, 0);
 }
+
+//------------------------------------------------------------------------------
 
 static struct 
 {
@@ -106,6 +129,7 @@ static struct
     char msg[MAXMSGSIZE];
 }buffer;
 
+//------------------------------------------------------------------------------
 
 int msgsend(int msqid, char* msg, int msgSize){
     if (msgSize>MAXMSGSIZE)
@@ -117,6 +141,8 @@ int msgsend(int msqid, char* msg, int msgSize){
     strncpy(buffer.msg, msg, msgSize);
     return msgsnd(msqid, &buffer, msgSize, 0);
 }
+
+//------------------------------------------------------------------------------
 
 int msgrecv(int msqid, char* msg, int msgSize){
     if (msgSize>MAXMSGSIZE)
@@ -130,6 +156,120 @@ int msgrecv(int msqid, char* msg, int msgSize){
     return res;
 }
 
+//**********************************************************************************
+//**********************************************************************************
+
+// Opens the file specified by filename and returns the file descriptor.
+
+int openFile(char* filename) {
+    int fd = open(filename, O_RDONLY, 0777);
+    if (fd == -1) {
+        perror("open");
+        return -1;
+    }
+    return fd;
+}
+
+//------------------------------------------------------------------------------
+
+// Reads the contents of the file with the given file descriptor into the teams array.
+// Returns -1 on error, 0 otherwise.
+int readFile(int fd, char **teams, int *numTeams, int *max_teams, int *dur) {
+    char buffer[BUFFER_SIZE];
+    char line_buffer[BUFFER_SIZE];
+    int desc, start, line_pos;
+    bool isDigit;
+    size_t length;
+    char *strToken;
+
+    do {
+        desc = read(fd, buffer, BUFFER_SIZE);
+        if (desc == -1) {
+            return -1;
+        }
+        // Traitement de chaque ligne
+        start = 0;
+        line_pos = 0;
+
+        for (int i = 0; i < desc; i++) {
+            if (buffer[i] == '\n') {
+                memcpy(line_buffer + line_pos, buffer + start, i - start);
+                line_buffer[line_pos + i - start] = '\0';
+
+                // Add the line to the array
+                if (*numTeams == *max_teams) {
+                    // if the array is full, reallocate it to double its size
+                    *max_teams *= 2;
+                    teams = (char**)realloc(teams, *max_teams * sizeof(char*));
+                }
+
+                teams[*numTeams] = strdup(line_buffer); // add a copy of the string to the array
+                (*numTeams)++;
+
+                /* avancée au début de la ligne suivante */
+                start = i + 1;
+                line_pos = 0;
+            }
+        }
+
+        /* Traiter la dernière ligne  */
+        if(start < desc) {
+            memcpy(line_buffer + line_pos, buffer + start, desc - start);
+            line_pos += desc - start;
+            line_buffer[line_pos] = '\0';
+            
+            char * strToken = strtok ( line_buffer, " ");          
+            bool isDigit = true;
+            size_t length = strlen(strToken);
+            for(int i=0; i<length; i++)
+                if (!isdigit(strToken[i]))
+                    isDigit = false;
+
+            if (isDigit){
+                *dur = atoi(strToken);
+            }else{
+                // Add the line to the array
+                if (numTeams == max_teams) {
+                    // if the array is full, reallocate it to double its size
+                    *max_teams *= 2;
+                    teams = (char**)realloc(teams, *max_teams * sizeof(char*));
+                }
+                teams[*numTeams] = strdup(line_buffer); // add a copy of the string to the array
+                numTeams++;
+            }
+        }
+    } while (desc>0);
+
+    return 0;
+}
+
+//**********************************************************************************
+
+void shuffleTeams(char **teams, int numTeams) {
+    // Initialize random number generator
+    srand(getpid());
+
+    // Shuffle the teams
+    for (int i = numTeams - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        char *temp = teams[i];
+        teams[i] = teams[j];
+        teams[j] = temp;
+    }
+}
+
+//**********************************************************************************
+
+void printTeams(char **teams, int numTeams, int dur) {
+    // Print the teams
+    for (int i = 0; i < numTeams; i++) {
+        printf("%s\n", teams[i]);
+    }
+    // Print the duration
+    printf("%d\n", dur);
+}
+
+//**********************************************************************************
 
 void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int id, int t){
 
