@@ -4,7 +4,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <time.h>
 #include <sys/time.h>
 #include <string.h>
 #include <sys/ipc.h>
@@ -12,8 +11,6 @@
 #include <sys/uio.h>
 #include <math.h>
 #include <sys/sem.h>
-#include <ctype.h>
-#include <stdbool.h>
 
 #include "ipcTools.h"
 
@@ -77,12 +74,10 @@ void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
       usleep(duree_action);
     }
     printf("\n\n\033[33m******** Récapitulatif *********\033[0m\n\n");
-    int cj = random() % 8;
-    int cj1 = random() % cj;
-    int cj2 = cj - cj1;
-    int cr = random() % 1;
-    int cr1 = random() % 1;
-    int cr2 = cr - cr1;
+    int cj1 = random() % 8;
+    int cj2 = 8 - cj1;
+    int cr1 = random() % 2;
+    int cr2 = random() % 2;
     int nb_t1 = nbGoal1 + random() % 10;
     int nb_t2 = nbGoal2 + random() % 10;
     int po1 = 30 + random() % 40;
@@ -123,7 +118,7 @@ void simule(int id, int t, int fd, int dur){
     V(mutMatch);
     //------------------------------------------------------------------------------
     int nbGoal1=random()%5;
-    int nbGoal2=random()%7;
+    int nbGoal2=random()%5;
     usleep(random()%MAXTIME);
     //------------------------------------------------------------------------------
 
@@ -205,13 +200,13 @@ void cleanup(int status, key_t key, int n){
     for (int i = 0; i < nbtour; i++)
     {
         for (int j = 0; j < m; j++){
+                puts("je fais ça");
                 semfree(tabSem[i][j]);
             }
             m/=2;
     }   
     semfree(mutMatch);
     shmfree(key);
-    msgfree(key+1);
     exit(status);
 }
 
@@ -235,42 +230,68 @@ int main(int argc, char *argv[]){
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
     int dur=MAXTIME;
+    int nbEquipes;
 
-    if(argc<2){printf("Veuillez saisi le nombre d'equipes\n");}
-    int nbEquipes=atoi(argv[1]);
-    //printf("%s",argv[1]);
+    if(argc<2){
+        printf("Veuillez saisir le nombre d'equipes qui participe au tournoi !\n");
+        exit(1);
+        }
+    nbEquipes=atoi(argv[1]);
     if (ceil(log2(nbEquipes)) != floor(log2(nbEquipes))){
-        printf("Veuillez saisi un nombre d'equipes qui est une puissance de 2");
+        printf("Veuillez saisir un nombre d'equipes qui est une puissance de 2\n");
         exit(1);
     }
 
-    if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
+    if (argc<3) {
 
-    /* ouverture du fichier */
-    fd1 = openFile(argv[2]);
-    if (fd1 == -1) {
-        perror("open");
-        return 2;
+        if (nbEquipes>32)
+        {
+            printf("Veuillez saisir un nombre d'equipes qui est inférieur a 32 ou saisir un fichier d'entrée\n");
+            exit(2);
+        }
+        
+        char* team_names[32] = {
+            "Real Madrid", "Barcelone", "Manchester United", "Bayern Munich",
+            "AC Milan", "Liverpool", "Juventus", "Chelsea",
+            "Paris Saint-Germain", "Borussia Dortmund", "Inter Milan", "Arsenal",
+            "Manchester City", "Tottenham", "Atlético Madrid", "Valence",
+            "Ajax Amsterdam", "Benfica Lisbonne", "Porto", "Spartak Moscou",
+            "Galatasaray", "Fenerbahçe", "CSKA Moscou", "PAOK Salonique",
+            "Celtic Glasgow", "Rangers Glasgow", "Boca Juniors", "River Plate",
+            "Flamengo", "Santos", "Palmeiras", "Corinthians"
+        };
+
+        teams = (char**)malloc(nbEquipes * sizeof(char*));
+        for (int i = 0; i < nbEquipes; i++) 
+            strcpy(teams[i], team_names[i]);
+
+    }else{
+        /* ouverture du fichier */
+        fd1 = openFile(argv[2]);
+        if (fd1 == -1) {
+            perror("open");
+            return 2;
+        }
+
+        // allocate memory for the array of strings
+        teams = (char**)malloc(max_teams * sizeof(char*));
+
+        if (readFile(fd1, teams, &numTeams, &max_teams, &dur) == -1) {
+            perror("read");
+            return 3;
+        }
+
+        printTeams(teams, numTeams);
+        
+        // Fermeture du fichier
+        if (close(fd1)==-1) {perror("close"); return 4;}
+
+        // Initialisation du générateur de nombres aléatoires
+        srand(getpid());
+
+        // Mélange des lignes dans le tableau
+        shuffleTeams(teams, numTeams);
     }
-
-    // allocate memory for the array of strings
-    teams = (char**)malloc(max_teams * sizeof(char*));
-
-    if (readFile(fd1, teams, &numTeams, &max_teams, &dur) == -1) {
-        perror("read");
-        return 3;
-    }
-
-    printTeams(teams, numTeams, dur);
-    
-    // Fermeture du fichier
-    if (close(fd1)==-1) {perror("close"); return 4;}
-
-    // Initialisation du générateur de nombres aléatoires
-    srand(getpid());
-
-    // Mélange des lignes dans le tableau
-    shuffleTeams(teams, numTeams);
 
 
     key_t key = ftok(".", getpid());
@@ -374,10 +395,6 @@ int main(int argc, char *argv[]){
     {
         while(waitpid(0,0,0) < 0);
     }
-    end_time = clock();
-
-    elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-    printf("Total elapsed time: %f seconds\n", elapsed_time);
     
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
