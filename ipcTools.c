@@ -260,13 +260,10 @@ void shuffleTeams(char **teams, int numTeams) {
 
 //**********************************************************************************
 
-void printTeams(char **teams, int numTeams, int dur) {
+void printTeams(char **teams, int numTeams) {
     // Print the teams
-    for (int i = 0; i < numTeams; i++) {
+    for (int i = 0; i < numTeams; i++) 
         printf("%s\n", teams[i]);
-    }
-    // Print the duration
-    printf("%d\n", dur);
 }
 
 //**********************************************************************************
