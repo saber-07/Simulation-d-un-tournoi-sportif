@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/wait.h>
@@ -33,7 +34,75 @@ Shared *shared;
 int **tabSem;
 int mutMatch;
 
-void simule(int id, int t, int fd){
+void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
+    printf("\n");
+    int score1 = 0;
+    int score2 = 0;
+    int duree = MINTIME + random()%(dur - MINTIME);
+    int duree_action = duree / (nbGoal1 + nbGoal2+1);
+    struct timeval duree_start, duree_stop;
+    int minute;
+    /* start chrono */
+    gettimeofday(&duree_start,0);
+  
+      int i = 0;
+      while (score1 < nbGoal1 && score2 < nbGoal2) {
+        
+      int choix = random() % 2;
+      i++;
+      if (choix == 1 && score1 < nbGoal1) {
+        score1++;
+        minute = (90 * (i-1)/ (nbGoal1 + nbGoal2)) + random() % (90 / (nbGoal1 + nbGoal2));
+        printf("\033[32m%d' %s a marqué un but\033[0m\n",minute,shared->tab[i1].name);
+      }
+      else if(choix == 0 && score2 < nbGoal2){
+        score2++;
+        minute = (90 * (i-1)/ (nbGoal1 + nbGoal2)) + random() % (90 / (nbGoal1 + nbGoal2));
+        printf("\033[36m%d' %s a marqué un but\033[0m\n",minute,shared->tab[i2].name);
+      }
+        usleep(duree_action);
+    }
+    while (score1 < nbGoal1) {
+      score1++;
+      i++;
+        minute = (90 * (i-1)/ (nbGoal1 + nbGoal2)) + random() % (90 / (nbGoal1 + nbGoal2));
+      printf("\033[32m%d' %s a marqué un but\033[0m\n",minute,shared->tab[i1].name);
+      usleep(duree_action);
+    }
+    while (score2 < nbGoal2) {
+      score2++;
+      i++;
+      minute = (90 * (i-1)/ (nbGoal1 + nbGoal2)) + random() % (90 / (nbGoal1 + nbGoal2));
+      printf("\033[36m%d' %s a marqué un but\033[0m\n",minute,shared->tab[i2].name);
+      usleep(duree_action);
+    }
+    printf("\n\n\033[33m******** Récapitulatif *********\033[0m\n\n");
+    int cj = random() % 8;
+    int cj1 = random() % cj;
+    int cj2 = cj - cj1;
+    int cr = random() % 1;
+    int cr1 = random() % 1;
+    int cr2 = cr - cr1;
+    int nb_t1 = nbGoal1 + random() % 10;
+    int nb_t2 = nbGoal2 + random() % 10;
+    int po1 = 30 + random() % 40;
+    int po2 = 100 - po1;
+  //Carton Jaune
+   printf("\033[33mNombre de carton jaune :\t %d\tvs\t%d  \033[0m\n",cj1, cj2);
+  // Carton Rouge
+   printf("\033[33mNombre de carton rouge :\t %d\tvs\t%d  \033[0m\n",cr1, cr2);
+  // Nombre de tentatives
+   printf("\033[33mNombre de tirs cadrés :\t %d\tvs\t%d  \033[0m\n", nb_t1, nb_t2);
+  // Possession de balle
+   printf("\033[33mPossession de balles :\t %d\tvs\t%d   \033[0m\n", po1, po2);
+  usleep(duree_action);
+  /* stop chrono */
+  gettimeofday(&duree_stop,0);
+  printf("\033[33mdurée du match : %.3f s\033[0m\n",(duree_stop.tv_usec - duree_start.tv_usec + 1000000.0 * (duree_stop.tv_sec - duree_start.tv_sec))/1000000);
+    printf("\n\033[33m********************************\n\033[0m\n");
+}
+
+void simule(int id, int t, int fd, int dur){
 
     srandom(getpid());
     int k = id-1;
@@ -59,12 +128,34 @@ void simule(int id, int t, int fd){
     //------------------------------------------------------------------------------
 
     P(mutMatch);
+    int penalty = 0;
+    int gagnant_penalty;
     if (nbGoal2<nbGoal1)
+      shared->tab[i2].status=0;
+    else if(nbGoal2>nbGoal1) {
+      shared->tab[i1].status=0;
+    }
+    else {
+      penalty = 1;
+      gagnant_penalty = random() % 2;
+      if (gagnant_penalty == 1) {
         shared->tab[i2].status=0;
-    else
+      }
+      else {
         shared->tab[i1].status=0;
-        
-    printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
+      }
+    }
+    printf("> %s %d - %d %s \n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name); 
+    if (penalty == 1) {
+      if (gagnant_penalty == 1) {
+        printf("  %s a gagné par tirs au buts \n",shared->tab[i1].name);
+      }
+      else {
+        printf("  %s a gagné par tirs au buts \n",shared->tab[i2].name);
+      }
+    }
+    printf("\n");
+    display_details(nbGoal1,nbGoal2,i1,i2, dur);
     saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, id, t);
 
     V(mutMatch);
@@ -240,17 +331,6 @@ int main(int argc, char *argv[]){
         n/=2;
     }
 
-    n=nbEquipes;
-    for (int i = 0; i < nbtour; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            printf("%d \t", tabSem[i][j]);
-        }
-        printf("\n");
-        n/=2;
-    }
-
     /* ouverture du fichier de sortie */
     if (access(OUTPUTFILE, F_OK) != -1) {
         fprintf(stderr, "Le fichier existe déjà\n");
@@ -282,7 +362,7 @@ int main(int argc, char *argv[]){
             if (strcmp(argv[3],"-man")==0)
                 simule_man(idMatch, tour);
 
-            simule(idMatch, tour, fd2);
+            simule(idMatch, tour, fd2, dur);
             exit(0);
         }
         n=n/2;
