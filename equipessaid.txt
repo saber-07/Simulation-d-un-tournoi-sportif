@@ -30,3 +30,4 @@
     Young Boys
     FC Zenit
     Sporting CP
+    10000

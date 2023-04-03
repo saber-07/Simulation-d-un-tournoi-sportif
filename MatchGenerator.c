@@ -11,6 +11,9 @@
 #include <sys/uio.h>
 #include <math.h>
 #include <sys/sem.h>
+#include <ctype.h>
+#include <stdbool.h>
+
 #include "ipcTools.h"
 
 // Var partagé
@@ -26,8 +29,6 @@ typedef struct
 }Shared;
 Shared *shared;
 
-int id_msg;
-
 // sémaphores
 int **tabSem;
 int mutMatch;
@@ -37,21 +38,12 @@ void simule(int id, int t){
     srandom(getpid());
     int k = id-1;
 
-    // printf("Valeur du semaphore P1 avant %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
-    // printf("Valeur du semaphore P2 avant %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
-
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
-    // printf("%d, %d\n", tabSem[t-1][2*k], tabSem[t-1][(2*k)+1]);
 
-    // printf("Valeur du semaphore P1 apres %d : %d\n", tabSem[t-1][2*k], semctl(tabSem[t-1][2*k], 0, GETVAL));
-    // printf("Valeur du semaphore P2 apres %d : %d\n", tabSem[t-1][(2*k)+1], semctl(tabSem[t-1][(2*k)+1], 0, GETVAL));
-    // printf("Valeur du semaphore %d : %d\n", mutMatch, semctl(mutMatch, 0, GETVAL));
     P(mutMatch);
-    // printf("Valeur du semaphore %d : %d\n", mutMatch, semctl(mutMatch, 0, GETVAL));
 
     int i1=((int)pow(2, t))*k;
-    // printf("%d\n", i1);
     while (shared->tab[i1].status!=1)
         i1++;
     
@@ -74,10 +66,7 @@ void simule(int id, int t){
         
     printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
     V(mutMatch);
-
-    // printf("Valeur du semaphore V avant %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL));
     V(tabSem[t][k]);
-    // printf("Valeur du semaphore V apres %d : %d\n", tabSem[t][k], semctl(tabSem[t][k], 0, GETVAL)); 
 }
 
 void simule_man(int id, int t){
@@ -86,6 +75,7 @@ void simule_man(int id, int t){
 
     P(tabSem[t-1][2*k]);
     P(tabSem[t-1][(2*k)+1]);
+
     P(mutMatch);
 
     int i1=((int)pow(2, t))*k;
@@ -142,6 +132,8 @@ int main(int argc, char *argv[]){
     char** teams=NULL;
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
+    int dur;
+
     if(argc<2){printf("Veuillez saisi le nombre d'equipes\n");}
     int nbEquipes=atoi(argv[1]);
     //printf("%s",argv[1]);
@@ -153,7 +145,7 @@ int main(int argc, char *argv[]){
     if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
     /* ouverture du fichier */
     fd = open(argv[2], O_RDONLY, 0777);
-    if (fd == -1) { perror("open"); return 2; }
+    if (fd == -1) { perror("open"); return 3; }
 
     // allocate memory for the array of strings
     teams = (char**)malloc(max_teams * sizeof(char*));
@@ -162,10 +154,9 @@ int main(int argc, char *argv[]){
     do
     {
         desc = read(fd, buffer, BUFFER_SIZE);
-        if(desc==-1){perror("read"); return 3;}
+        if(desc==-1){perror("read"); return 4;}
 
         int start = 0;
-
         // Traitement de chaque ligne
         for (int i = 0; i < desc; i++) {
             if (buffer[i] == '\n') {
@@ -186,26 +177,41 @@ int main(int argc, char *argv[]){
                 line_pos = 0;
             }
         }
-        /* Traiter la dernière ligne */
+        /* Traiter la dernière ligne  afin de récupérer le nombre de ligne */
         if(start < desc) {
             memcpy(line_buffer + line_pos, buffer + start, desc - start);
             line_pos += desc - start;
             line_buffer[line_pos] = '\0';
-            // Add the line to the array
-            if (numTeams == max_teams) {
-                // if the array is full, reallocate it to double its size
-                max_teams *= 2;
-                teams = (char**)realloc(teams, max_teams * sizeof(char*));
+            
+            char * strToken = strtok ( line_buffer, " ");
+            bool isDigit = true;
+            size_t length = strlen(strToken);
+            for(int i=0; i<length; i++)
+                if (!isdigit(strToken[i]))
+                    isDigit = false;
+
+            if (isDigit){
+                dur = atoi(strToken);
+            }else{
+                // Add the line to the array
+                if (numTeams == max_teams) {
+                    // if the array is full, reallocate it to double its size
+                    max_teams *= 2;
+                    teams = (char**)realloc(teams, max_teams * sizeof(char*));
+                }
+                teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
+                numTeams++;
+
+                dur = MAXTIME;
             }
-            teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
-            numTeams++;
         }
     } while (desc>0);
 
     // print out the teams
-    // for (int i = 0; i < p1*2; i++) {
-    //     printf("%s\n", teams[i]);
-    // }
+    for (int i = 0; i < numTeams; i++) {
+        printf("%s\n", teams[i]);
+    }
+    printf("%d\n", dur);
 
     // Initialisation du générateur de nombres aléatoires
     srand(time(NULL));
@@ -239,14 +245,6 @@ int main(int argc, char *argv[]){
         strcpy(shared->tab[i].name, teams[i]);
         shared->tab[i].status=1;
         free(teams[i]);
-    }
-
-    int id_msg = msgalloc(key+1);
-    if (id_msg == -1)
-    {
-        perror("Alloc msg");
-        cleanup(2, key, (int) log2(nbEquipes));
-        return 2;
     }
 
     mutMatch = semalloc(key+2, 1);
