@@ -33,7 +33,7 @@ Shared *shared;
 int **tabSem;
 int mutMatch;
 
-void simule(int id, int t){
+void simule(int id, int t, int fd){
 
     srandom(getpid());
     int k = id-1;
@@ -65,6 +65,8 @@ void simule(int id, int t){
         shared->tab[i1].status=0;
         
     printf("%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, id, t);
+    saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, id, t);
+
     V(mutMatch);
     V(tabSem[t][k]);
 }
@@ -122,9 +124,16 @@ void cleanup(int status, key_t key, int n){
     exit(status);
 }
 
-int main(int argc, char *argv[]){    
+int main(int argc, char *argv[]){   
 
-    int fd;
+    int fd2;                     /* le descripteur pour le fichier de sortie */
+
+    clock_t start_time, end_time;
+    double elapsed_time;
+
+    start_time = clock();
+
+    int fd1;                     /* le descripteur pour le fichier d'entrée */
     ssize_t desc;
     char buffer[BUFFER_SIZE];
     char line_buffer[BUFFER_SIZE];
@@ -132,7 +141,7 @@ int main(int argc, char *argv[]){
     char** teams=NULL;
     int max_teams = TEAMS; // maximum number of teams that can be stored in the array
     int numTeams=0;
-    int dur;
+    int dur=MAXTIME;
 
     if(argc<2){printf("Veuillez saisi le nombre d'equipes\n");}
     int nbEquipes=atoi(argv[1]);
@@ -144,8 +153,8 @@ int main(int argc, char *argv[]){
 
     if (argc<2) {perror("veillez precisez le fichier text qui contient les equipes"); exit(2);}
     /* ouverture du fichier */
-    fd = open(argv[2], O_RDONLY, 0777);
-    if (fd == -1) { perror("open"); return 3; }
+    fd1 = open(argv[2], O_RDONLY, 0777);
+    if (fd1 == -1) { perror("open"); return 3; }
 
     // allocate memory for the array of strings
     teams = (char**)malloc(max_teams * sizeof(char*));
@@ -153,7 +162,7 @@ int main(int argc, char *argv[]){
     // Lecture du fichier ligne par ligne
     do
     {
-        desc = read(fd, buffer, BUFFER_SIZE);
+        desc = read(fd1, buffer, BUFFER_SIZE);
         if(desc==-1){perror("read"); return 4;}
 
         int start = 0;
@@ -177,13 +186,13 @@ int main(int argc, char *argv[]){
                 line_pos = 0;
             }
         }
-        /* Traiter la dernière ligne  afin de récupérer le nombre de ligne */
+        /* Traiter la dernière ligne  */
         if(start < desc) {
             memcpy(line_buffer + line_pos, buffer + start, desc - start);
             line_pos += desc - start;
             line_buffer[line_pos] = '\0';
             
-            char * strToken = strtok ( line_buffer, " ");
+            char * strToken = strtok ( line_buffer, " ");          
             bool isDigit = true;
             size_t length = strlen(strToken);
             for(int i=0; i<length; i++)
@@ -201,8 +210,6 @@ int main(int argc, char *argv[]){
                 }
                 teams[numTeams] = strdup(line_buffer); // add a copy of the string to the array
                 numTeams++;
-
-                dur = MAXTIME;
             }
         }
     } while (desc>0);
@@ -217,7 +224,7 @@ int main(int argc, char *argv[]){
     srand(time(NULL));
     
     // Fermeture du fichier
-    if (close(fd)==-1) {perror("close"); return 4;}
+    if (close(fd1)==-1) {perror("close"); return 4;}
 
     // Mélange des lignes dans le tableau
     for (int i = numTeams-1; i > 0; i--) {
@@ -297,6 +304,18 @@ int main(int argc, char *argv[]){
         n/=2;
     }
 
+    /* ouverture du fichier de sortie */
+    if (access(OUTPUTFILE, F_OK) != -1) {
+        fprintf(stderr, "Le fichier existe déjà\n");
+        exit(1);
+    }
+    fd2 = open(OUTPUTFILE, O_WRONLY | O_CREAT | O_EXCL | O_EXCL, 00644);
+    /* ouverture impossible */
+    if (fd2==-1) {              
+        perror("open");
+        exit(8);
+    } 
+
     puts ("***** STRIKE <CR> TO START, STOP THE PROGRAM *****");
     getchar();
 
@@ -316,7 +335,7 @@ int main(int argc, char *argv[]){
             if (strcmp(argv[3],"-man")==0)
                 simule_man(idMatch, tour);
 
-            simule(idMatch, tour);
+            simule(idMatch, tour, fd2);
             exit(0);
         }
         n=n/2;
@@ -328,10 +347,16 @@ int main(int argc, char *argv[]){
     {
         while(waitpid(0,0,0) < 0);
     }
+    end_time = clock();
+
+    elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+    printf("Total elapsed time: %f seconds\n", elapsed_time);
     
     /* now wait for the user to strike CR, then stop all tasks */
     getchar();
     sleep(1); /* enough if MAXTIME < 1s */
+    close(fd2);
+    remove(OUTPUTFILE);
     cleanup(0, key, nbtour);
     free(teams);
 

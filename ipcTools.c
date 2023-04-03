@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -6,6 +7,8 @@
 #include <sys/shm.h>
 #include <sys/msg.h>
 #include <unistd.h>
+#include <fcntl.h>
+
 #include "ipcTools.h"
 
 int nFork (int nbProcs){
@@ -125,4 +128,24 @@ int msgrecv(int msqid, char* msg, int msgSize){
     int res = msgrcv(msqid, &buffer, msgSize, 1, 0);
     if(res!=-1) strncpy(msg, buffer.msg, msgSize);
     return res;
+}
+
+
+void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int id, int t){
+
+    ssize_t bytes_written;               /* le nombre d’octets par transfert */
+    char buffer[BUFFER_SIZE];              /* le buffer de transfert*/
+
+    char *format = "%s : %d - %d : %s \t (idMatch : %d \t tour : %d)\n";
+    if (snprintf(buffer, BUFFER_SIZE, format, name1, nbGoal1, nbGoal2, name2, id, t)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
 }
