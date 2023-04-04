@@ -10,4 +10,5 @@ doxygen :
 
 
 clean : 
-	rm -f $(OBJ) main ./html/*
+	rm -f ipcTools.o main.o main
+	rm -rf doc

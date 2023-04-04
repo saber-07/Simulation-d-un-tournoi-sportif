@@ -258,3 +258,82 @@ void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int 
         exit(10);
     }
 }
+
+//**********************************************************************************
+
+/**
+    @brief Enregistre le résultat d'un match dans un fichier
+    @param fd Le descripteur de fichier du fichier de sortie
+    @param name1 Le nom de la première équipe
+    @param nbGoal1 Le nombre de buts marqués par la première équipe
+    @param name2 Le nom de la deuxième équipe
+    @param nbGoal2 Le nombre de buts marqués par la deuxième équipe
+    @param cj1 Le nombre de cartes jaunes de la première équipe
+    @param cj2 Le nombre de cartes jaunes de la deuxième équipe
+    @param cr1 Le nombre de cartes rouges de la première équipe
+    @param cr2 Le nombre de cartes rouges de la deuxième équipe
+    @param nb_t1 Le nombre de tentatives de la première équipe
+    @param nb_t2 Le nombre de tentatives de la deuxième équipe
+    @param pot1 le pourcentage de la première équipe
+    @param pot2 le pourcentage de la deuxième équipe
+    
+*/
+void saveDetail(int fd,char *name1, int nbGoal1, char *name2, int nbGoal2,int cj1,int cj2, int cr1,int cr2,int nb_t1, int nb_t2, int pot1, int pot2){
+    ssize_t bytes_written;               /* le nombre d’octets par transfert */
+    char buffer[BUFFER_SIZE];            /* le buffer de transfert*/
+    char *format = "%s : %d - %d : %s \n\n";
+    if (snprintf(buffer, BUFFER_SIZE, format, name1, nbGoal1, nbGoal2, name2)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
+    format = "Nombre de carton jaune : \t %d\tvs\t%d \n";
+    if (snprintf(buffer, BUFFER_SIZE, format, cj1, cj2)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
+    format = "Nombre de carton rouge : \t %d\tvs\t%d \n";
+    if (snprintf(buffer, BUFFER_SIZE, format, cr1, cr2)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
+    format = "Nombre de tirs cadrés : \t %d\tvs\t%d \n";
+    if (snprintf(buffer, BUFFER_SIZE, format, nb_t1, nb_t2)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
+    format = "Possession de balles : \t     %d\tvs\t%d \n\n";
+    if (snprintf(buffer, BUFFER_SIZE, format, pot1, pot2)<0)
+    {
+        perror("snprintf");
+        exit(9);
+    }
+    bytes_written = write(fd, buffer, strlen(buffer));
+    if (bytes_written == -1) {
+        perror("write");
+        exit(10);
+    }
+}

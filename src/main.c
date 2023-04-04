@@ -41,7 +41,7 @@ int mutMatch;
   @param i2 L'indice de la deuxième équipe dans un tableau de structures représentant toutes les équipes.
   @param dur La durée maximale du match, en secondes.
 */
-void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
+void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur,int fd){
   // Affichage d'une ligne vide pour séparer les affichages précédents de ceux du match.
   printf("\n");
   // Initialisation des scores de chaque équipe à 0.
@@ -123,7 +123,9 @@ void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
   /* stop chrono */
   gettimeofday(&duree_stop,0);
   printf("\033[33mdurée du match : %.3f s\033[0m\n",(duree_stop.tv_usec - duree_start.tv_usec + 1000000.0 * (duree_stop.tv_sec - duree_start.tv_sec))/1000000);
-    printf("\n\033[33m********************************\n\033[0m\n");
+  printf("\n\033[33m********************************\n\033[0m\n");
+
+  saveDetail(fd,shared->tab[i1].name,nbGoal1,shared->tab[i2].name,nbGoal2,cj1,cj2,cr1,cr2,nb_t1,nb_t2,po1,po2);
 }
 
 /**
@@ -136,76 +138,80 @@ void display_details(int nbGoal1, int nbGoal2,int i1,int i2, int dur){
 */
 void simule(int id, int t, int fd, int dur, int f_csv, bool detail){
 
-    srandom(getpid());
-    int k = id-1;
+  srandom(getpid());
+  int k = id-1;
 
-    // Attente des sémaphores de début de match
-    P(tabSem[t-1][2*k]);
-    P(tabSem[t-1][(2*k)+1]);
-    // Exclusion mutuelle pour accéder à la zone partagée
-    P(mutMatch);
-    // Recherche des deux équipes qui vont participer au match
+  // Attente des sémaphores de début de match
+  P(tabSem[t-1][2*k]);
+  P(tabSem[t-1][(2*k)+1]);
+  // Exclusion mutuelle pour accéder à la zone partagée
+  P(mutMatch);
+  // Recherche des deux équipes qui vont participer au match
 
-    int i1=((int)pow(2, t))*k;
-    while (shared->tab[i1].status!=1)
-        i1++;
-    
-    int i2=i1+1;
-    while (shared->tab[i2].status!=1)
-        i2++;
+  int i1=((int)pow(2, t))*k;
+  while (shared->tab[i1].status!=1)
+      i1++;
+  
+  int i2=i1+1;
+  while (shared->tab[i2].status!=1)
+      i2++;
 
-    // Fin de l'exclusion mutuelle
-    V(mutMatch);
-    // Simulation du match
-    int nbGoal1=random()%5;
-    int nbGoal2=random()%5;
-    // Exclusion mutuelle pour accéder à la zone partagée
+  // Fin de l'exclusion mutuelle
+  V(mutMatch);
+  // Simulation du match
+  int nbGoal1=random()%5;
+  int nbGoal2=random()%5;
 
-    P(mutMatch);
-    // Détermination de l'équipe gagnante
-    int penalty = 0;
-    int gagnant_penalty;
-    if (nbGoal2<nbGoal1)
+  // simulation pour le cas ou l'utilisateur veut pas de details
+  if (!detail)
+    usleep(random()%dur);
+  // Exclusion mutuelle pour accéder à la zone partagée
+
+  P(mutMatch);
+  // Détermination de l'équipe gagnante
+  int penalty = 0;
+  int gagnant_penalty;
+  if (nbGoal2<nbGoal1)
+    shared->tab[i2].status=0;
+  else if(nbGoal2>nbGoal1) {
+    shared->tab[i1].status=0;
+  }
+  else {
+    penalty = 1;
+    gagnant_penalty = random() % 2;
+    if (gagnant_penalty == 1) {
       shared->tab[i2].status=0;
-    else if(nbGoal2>nbGoal1) {
-      shared->tab[i1].status=0;
     }
     else {
-      penalty = 1;
-      gagnant_penalty = random() % 2;
-      if (gagnant_penalty == 1) {
-        shared->tab[i2].status=0;
-      }
-      else {
-        shared->tab[i1].status=0;
-      }
+      shared->tab[i1].status=0;
     }
-    // Affichage du résultat du match
-    printf("> %s %d - %d %s \t (tour N°%d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, t); 
-    if (penalty == 1) {
-      if (gagnant_penalty == 1) {
-        printf("  %s a gagné par tirs au buts \n",shared->tab[i1].name);
-      }
-      else {
-        printf("  %s a gagné par tirs au buts \n",shared->tab[i2].name);
-      }
+  }
+  // Affichage du résultat du match
+  printf("> %s %d - %d %s \t (tour N°%d)\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, t); 
+  if (penalty == 1) {
+    if (gagnant_penalty == 1) {
+      printf("  %s a gagné par tirs au buts \n",shared->tab[i1].name);
     }
-    printf("\n");
-    if (detail)
-      // Affichage des détails du match
-      display_details(nbGoal1,nbGoal2,i1,i2, dur);
-    
+    else {
+      printf("  %s a gagné par tirs au buts \n",shared->tab[i2].name);
+    }
+  }
+  printf("\n");
+  if (detail)
+    // Affichage des détails du match
+    display_details(nbGoal1,nbGoal2,i1,i2, dur,fd);
+  else
     // Sauvegarde des résultats dans le fichier
     saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, t);
 
-    char data[200];
-    sprintf(data, "%s, %d, %d, %s, %d\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, t);
-    write(f_csv, data, strlen(data));
+  char data[200];
+  sprintf(data, "%s, %d, %d, %s, %d\n", shared->tab[i1].name, nbGoal1, nbGoal2, shared->tab[i2].name, t);
+  write(f_csv, data, strlen(data));
 
-    // Fin de l'exclusion mutuelle
-    V(mutMatch);
-    // Libération du sémaphore de fin de match pour l'équipe
-    V(tabSem[t][k]);
+  // Fin de l'exclusion mutuelle
+  V(mutMatch);
+  // Libération du sémaphore de fin de match pour l'équipe
+  V(tabSem[t][k]);
 }
 
 /**
@@ -268,9 +274,10 @@ void simule_man(int id, int t, int fd, int dur, int f_csv, bool detail){
   }
   printf("\n");
   if (detail)
-    display_details(nbGoal1,nbGoal2,i1,i2, dur);
+    display_details(nbGoal1,nbGoal2,i1,i2, dur,fd);
+  else
+    saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, t);
   
-  saveResult(fd, shared->tab[i1].name, nbGoal1, shared->tab[i2].name, nbGoal2, t);
   char data[200];
   sprintf(data, "%s, %d, %d, %s, %d\n", shared->tab[i1].name, nbGoal1, nbGoal2,
           shared->tab[i2].name, t);
@@ -316,88 +323,86 @@ void cleanup(int status, key_t key, int n) {
  */
 int main(int argc, char *argv[]){   
 
-    int fd2;                     /* le descripteur pour le fichier de sortie */
+  int fd2;                     /* le descripteur pour le fichier de sortie */
 
-    clock_t start_time, end_time;
-    double elapsed_time;
+  clock_t start_time, end_time;
+  double elapsed_time;
 
-    start_time = clock();
+  start_time = clock();
 
-    int fd1;                     /* le descripteur pour le fichier d'entrée */
-    ssize_t desc;
-    char buffer[BUFFER_SIZE];
-    char line_buffer[BUFFER_SIZE];
-    int line_pos = 0;
-    char** teams=NULL;
-    int max_teams = TEAMS; // maximum number of teams that can be stored in the array
-    int numTeams=0;
-    int dur=MAXTIME;
-    int nbEquipes;
+  int fd1;                     /* le descripteur pour le fichier d'entrée */
+  ssize_t desc;
+  char buffer[BUFFER_SIZE];
+  char line_buffer[BUFFER_SIZE];
+  int line_pos = 0;
+  char** teams=NULL;
+  int max_teams = TEAMS; // maximum number of teams that can be stored in the array
+  int numTeams=0;
+  int dur=TIME;
+  int nbEquipes=NBTEAMS;
 
     // Vérifier le nombre d'arguments passés au programme
-    if(argc<2){
-        printf("Veuillez saisir le nombre d'equipes qui participe au tournoi !\n");
-        exit(1);
-        }
-    nbEquipes=atoi(argv[1]);
-    if (ceil(log2(nbEquipes)) != floor(log2(nbEquipes))){
+    if(argc>2){
+      nbEquipes=atoi(argv[1]);
+      if (ceil(log2(nbEquipes)) != floor(log2(nbEquipes))){
         printf("Veuillez saisir un nombre d'equipes qui est une puissance de 2\n");
         exit(1);
+      }
     }
 
     if (argc<3) {
 
-        if (nbEquipes>32)
-        {
-            printf("Veuillez saisir un nombre d'equipes qui est inférieur a 32 ou saisir un fichier d'entrée\n");
-            exit(2);
-        }
-        
-        // tableau d'équipe pour dans le cas ou pas de fichier est déclaré
-        char* team_names[32] = {
-            "Real Madrid", "Barcelone", "Manchester United", "Bayern Munich",
-            "AC Milan", "Liverpool", "Juventus", "Chelsea",
-            "Paris Saint-Germain", "Borussia Dortmund", "Inter Milan", "Arsenal",
-            "Manchester City", "Tottenham", "Atlético Madrid", "Valence",
-            "Ajax Amsterdam", "Benfica Lisbonne", "Porto", "Spartak Moscou",
-            "Galatasaray", "Fenerbahçe", "CSKA Moscou", "PAOK Salonique",
-            "Celtic Glasgow", "Rangers Glasgow", "Boca Juniors", "River Plate",
-            "Flamengo", "Santos", "Palmeiras", "Corinthians"
-        };
+      if (nbEquipes>32)
+      {
+          printf("Veuillez saisir un nombre d'equipes qui est inférieur a 32 ou saisir un fichier d'entrée\n");
+          exit(2);
+      }
+      
+      // tableau d'équipe pour dans le cas ou pas de fichier est déclaré
+      char* team_names[32] = {
+          "Real Madrid", "Barcelone", "Manchester United", "Bayern Munich",
+          "AC Milan", "Liverpool", "Juventus", "Chelsea",
+          "Paris Saint-Germain", "Borussia Dortmund", "Inter Milan", "Arsenal",
+          "Manchester City", "Tottenham", "Atlético Madrid", "Valence",
+          "Ajax Amsterdam", "Benfica Lisbonne", "Porto", "Spartak Moscou",
+          "Galatasaray", "Fenerbahçe", "CSKA Moscou", "PAOK Salonique",
+          "Celtic Glasgow", "Rangers Glasgow", "Boca Juniors", "River Plate",
+          "Flamengo", "Santos", "Palmeiras", "Corinthians"
+      };
 
-        teams = (char**)malloc(nbEquipes * sizeof(char*));
-        for (int i = 0; i < nbEquipes; i++){
-            teams[i] = (char*)malloc((strlen(team_names[i]) + 1) * sizeof(char));
-            strcpy(teams[i], team_names[i]);
-        }
+      teams = (char**)malloc(nbEquipes * sizeof(char*));
+      for (int i = 0; i < nbEquipes; i++){
+        teams[i] = (char*)malloc((strlen(team_names[i]) + 1) * sizeof(char));
+        strcpy(teams[i], team_names[i]);
+      }
 
     }else{
-        /* ouverture du fichier */
-        fd1 = openFile(argv[2]);
-        if (fd1 == -1) {
-            perror("open");
-            return 2;
-        }
+      /* ouverture du fichier */
+      fd1 = openFile(argv[2]);
+      if (fd1 == -1) {
+        perror("open");
+        return 2;
+      }
 
-        // Alloue de la mémoire pour un tableau de caractères
-        teams = (char**)malloc(max_teams * sizeof(char*));
+      // Alloue de la mémoire pour un tableau de caractères
+      teams = (char**)malloc(max_teams * sizeof(char*));
 
-        if (readFile(fd1, teams, &numTeams, &max_teams, &dur) == -1) {
-            perror("read");
-            return 3;
-        }
+      if (readFile(fd1, teams, &numTeams, &max_teams, &dur) == -1) {
+        perror("read");
+        return 3;
+      }
 
-        // fontion qui affiche les équipes tirer au hasard 
-        // printTeams(teams, numTeams);
-        
-        // Fermeture du fichier
-        if (close(fd1)==-1) {perror("close"); return 4;}
+      // fontion qui affiche les équipes tirer au hasard 
+      // printTeams(teams, numTeams);
+      
+      // Fermeture du fichier
+      if (close(fd1)==-1) {perror("close"); return 4;}
 
-        // Initialisation du générateur de nombres aléatoires
-        srand(getpid());
+      // Initialisation du générateur de nombres aléatoires
+      srand(getpid());
 
-        // Mélange des lignes dans le tableau
-        shuffleTeams(teams, numTeams);
+      // Mélange des lignes dans le tableau
+      shuffleTeams(teams, numTeams);
     }
 
 
@@ -414,7 +419,7 @@ int main(int argc, char *argv[]){
       return 5;
       cleanup(5, key, (int) log2(nbEquipes));
   }
-  for (int i = 0; i < numTeams; i++) {
+  for (int i = 0; i < nbEquipes; i++) {
       strcpy(shared->tab[i].name, teams[i]);
       shared->tab[i].status=1;
       free(teams[i]);
@@ -540,10 +545,10 @@ int main(int argc, char *argv[]){
       indice_winner++;
   }
   // afficher le gagnant    
-  printf("\033[32mLe gagnant du tournoi : %s \033[0m\n",shared->tab[indice_winner].name);
-  printf("\033[31m FIN DU TOURNOI \t \033[0m\n");
+  printf("Le gagnant du tournoi : \033[32m %s \033[0m \n",shared->tab[indice_winner].name);
+  printf("\033[31mFIN DU TOURNOI \t \033[0m\n");
 
-  /* attendez maintenant que l'utilisateur tapez CR, puis arrêtez toutes les tâches */
+  /* attend maintenant que l'utilisateur tape CR, pour arrêter toutes les tâches */
   getchar();
   sleep(1); 
   close(fd2);

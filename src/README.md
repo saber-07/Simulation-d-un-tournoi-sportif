@@ -10,8 +10,8 @@ Le programme que nous avons réalisé peut être lancé via une console sur un s
 ## Contributeurs
 
 - [@saber-07](https://github.com/saber-07)
-- [@Saiid12] (https://github.com/Saiid12)
-- [@NazimKs] (https://github.com/NazimKs)
+- [@Saiid12](https://github.com/Saiid12)
+- [@NazimKs](https://github.com/NazimKs)
 
 ## 🚀 À propos de Nous
 
@@ -19,9 +19,71 @@ Nous sommes Said MESBAHI, Nazim KESKES , Saber ABDERRAHMANE, etudiants en L3 Inf
 
 ## Lancement du Programme
 
+## Compilation
 
+La compilation de ce programme nécessite gcc, makefile. Pour la documentation, doxygen et graphviz sont requis.
 
-## Documentation
+Si l'un des exécutables est manquant, il faut l'installer avec la commande
 
-[Documentation](doc/html/index.html)
+```
+sudo apt install nom_de_l_executable_a_installer
+```
 
+### Programme
+
+Pour (re)compiler le programme, il faut utiliser une des  commandes suivantes :
+
+```
+make main
+```
+
+Pour lancer le programme en mode automatique
+```
+./main [nombre d'équipes] [fichier d'entrée] -auto
+```
+
+Pour lancer le programme en mode manuel
+```
+./main [nombre d'équipes] [fichier d'entrée] -man 
+```
+
+Pour lancer le programme avec un nombre d'équipes par défaut
+
+```
+./main [fichier d'entrée]
+```
+
+Pour lancer le programme avec un nombre d'équipes et une liste d'équipe par défaut
+
+```
+./main
+```
+
+### Documentation
+
+Une documentation Doxygen est disponible. Une fois générée, celle-ci se trouvera dans le dossier `doc`. Pour la générer, il suffit d'entre la commande
+
+```
+make doxygen
+```
+
+Pour re-générer la documentation, il faut utiliser les commandes
+
+```
+make clean
+make doxygen
+```
+
+### Remarque
+
+Pour compiler le programme et la documentation en même temps, la commande suivante peut être utilisée.
+
+```
+make all
+```
+
+Pour nettoyer le répertoire, il y a la commande
+
+```
+make clean
+```
