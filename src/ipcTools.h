@@ -15,14 +15,12 @@
 #define OUTPUTFILE "result.txt" /* Fichier text de sortie pour les résultats */
 #define OUTPUTCSV "result.csv"  /* Fichier csv de sortie pour les résultats */
 /**
-
 @brief Crée un certain nombre de processus fils
 @param nbProcs Nombre de processus fils à créer
 @return int Renvoie l'identifiant du processus fils créé si le processus est fils, 0 si le processus est le père et -1 en cas d'erreur
 */
 int nFork (int nbProcs);
 /**
-
 @brief Alloue un nouveau sémaphore et initialise sa valeur
 @param key Clé utilisée pour identifier le sémaphore
 @param valInit Valeur initiale du sémaphore
@@ -106,4 +104,4 @@ void printTeams(char **teams, int numTeams);
 @param id Identifiant unique du match.
 @param t Temps total de jeu en microsecondes.
 */
-void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int id, int t);
+void saveResult(int fd, char *name1, int nbGoal1, char *name2, int nbGoal2, int t);
